@@ -50,13 +50,32 @@ void handleSave() {
     String ssid = server.arg("ssid");
     String password = server.arg("password");
 
-    // Here you can handle the saving of Wi-Fi credentials, e.g., store in EEPROM
-    // For demonstration, just print the received data
-    Serial.println("Received SSID: " + ssid);
-    Serial.println("Received Password: " + password);
+    // Attempt to connect to the selected Wi-Fi network
+    WiFi.begin(ssid.c_str(), password.c_str());
 
-    server.send(200, "text/plain", "Configuration saved");
+    // Provide feedback to the user
+    String response = "Trying to connect to " + ssid + "...";
+    server.send(200, "text/plain", response);
+
+    // Attempt to connect for a limited time (e.g., 10 seconds)
+    int timeout = 10000; // 10 seconds
+    int startTime = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeout) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+
+    // Check if connected
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("Connected to Wi-Fi!");
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("Failed to connect to Wi-Fi.");
+    }
 }
+
 
 void setup() {
     // Start serial communication
