@@ -1,17 +1,27 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include "websocket.h"
 
-// Create an instance of the WebServer
+#include <ArduinoJson.h>
+
+// moisture sensor
+#include "sensors/moistureSensor.h"
+
 WebServer server(80);
 
 // Function to get a list of available SSIDs
-String getSSIDs() {
+String getSSIDs()
+{
     String ssids = "";
     int n = WiFi.scanNetworks();
-    if (n == 0) {
+    if (n == 0)
+    {
         ssids += "<option>No networks found</option>";
-    } else {
-        for (int i = 0; i < n; ++i) {
+    }
+    else
+    {
+        for (int i = 0; i < n; ++i)
+        {
             ssids += "<option value=\"" + WiFi.SSID(i) + "\">" + WiFi.SSID(i) + "</option>";
         }
     }
@@ -19,7 +29,7 @@ String getSSIDs() {
 }
 
 // HTML content to be served
-const char* index_html = R"rawliteral(
+const char *index_html = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head><title>ESP32 Wi-Fi Config</title></head>
@@ -39,14 +49,16 @@ const char* index_html = R"rawliteral(
 )rawliteral";
 
 // Function to handle the root request
-void handleRoot() {
+void handleRoot()
+{
     String html = index_html;
     html.replace("<!--SSIDS_PLACEHOLDER-->", getSSIDs());
     server.send(200, "text/html", html);
 }
 
 // Function to handle the /save request
-void handleSave() {
+void handleSave()
+{
     String ssid = server.arg("ssid");
     String password = server.arg("password");
 
@@ -60,26 +72,35 @@ void handleSave() {
     // Attempt to connect for a limited time (e.g., 10 seconds)
     int timeout = 10000; // 10 seconds
     int startTime = millis();
-    while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeout) {
+    while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeout)
+    {
         delay(500);
         Serial.print(".");
     }
     Serial.println("");
 
     // Check if connected
-    if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.status() == WL_CONNECTED)
+    {
         Serial.println("Connected to Wi-Fi!");
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
-    } else {
+
+        connectToWebSocket("ws://192.168.0.171:8080/v1/?token=pot_1");
+    }
+    else
+    {
         Serial.println("Failed to connect to Wi-Fi.");
     }
 }
 
-
-void setup() {
+void setup()
+{
     // Start serial communication
     Serial.begin(115200);
+
+    // Initialize moisture sensor
+    initMoistureSensor();
 
     // Set up ESP32 as an access point
     WiFi.softAP("ESP32_Config_AP");
@@ -96,7 +117,26 @@ void setup() {
     server.begin();
 }
 
-void loop() {
-    // Handle client requests
+void sendSensorData() {
+    // Read the actual moisture sensor value
+    int moistureLevel = readMoistureLevel();
+
+    // Create a JSON document to hold the data
+    StaticJsonDocument<256> dataDoc;
+    dataDoc["moisture"] = moistureLevel;
+
+    // Send the data using the helper function
+    sendWebSocketMessage("HandleUpdateSensorData", dataDoc.as<JsonObject>());
+}
+
+
+void loop()
+{
+    pollWebSocket();
+
+    sendSensorData();
+
     server.handleClient();
+
+    delay(1000);
 }
