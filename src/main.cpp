@@ -123,10 +123,11 @@ void sendSensorData() {
 
     // Create a JSON document to hold the data
     StaticJsonDocument<256> dataDoc;
-    dataDoc["moisture"] = moistureLevel;
+    dataDoc["sensorID"] = 0;
+    dataDoc["value"] = moistureLevel;
 
     // Send the data using the helper function
-    sendWebSocketMessage("HandleUpdateSensorData", dataDoc.as<JsonObject>());
+    sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
 }
 
 
