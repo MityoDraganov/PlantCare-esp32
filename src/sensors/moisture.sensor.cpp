@@ -17,7 +17,7 @@
 //     return sensorValue;
 // }
 
-#include "moistureSensor.h"
+#include "moisture.sensor.h"
 #include <Arduino.h>
 
 // Define the pin where the moisture sensor is connected
