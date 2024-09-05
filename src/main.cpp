@@ -5,7 +5,9 @@
 #include <ArduinoJson.h>
 
 // moisture sensor
-#include "sensors/moistureSensor.h"
+#include "sensors/moisture.sensor.h"
+
+#include "utils/EEPROM/EEPROM.util.h"
 
 WebServer server(80);
 
@@ -94,10 +96,37 @@ void handleSave()
     }
 }
 
+void testEEPROM()
+{
+    // Initialize the EEPROM utility with a size of 64 bytes (adjust if necessary)
+    EEPROMUtil eepromUtil(64);
+    eepromUtil.begin();
+
+    // Generate a random 32-character string
+    // String randomString = "";
+    // for (int i = 0; i < 32; i++)
+    // {
+    //     char randomChar = char(random(32, 127)); // Generate a random printable ASCII character
+    //     randomString += randomChar;
+    // }
+
+    // // Save the string to the EEPROM at address 0
+    // eepromUtil.writeString(0, randomString, 32);
+
+    // // Read the string back from the EEPROM
+    String readString = eepromUtil.readString(0, 32);
+
+    // // Print the original and read strings to the serial monitor
+    // Serial.println("Original String: " + randomString);
+    Serial.println("Read String: " + readString);
+}
+
 void setup()
 {
     // Start serial communication
     Serial.begin(115200);
+
+    testEEPROM();
 
     // Initialize moisture sensor
     initMoistureSensor();
@@ -117,7 +146,8 @@ void setup()
     server.begin();
 }
 
-void sendSensorData() {
+void sendSensorData()
+{
     // Read the actual moisture sensor value
     int moistureLevel = readMoistureLevel();
 
@@ -129,7 +159,6 @@ void sendSensorData() {
     // Send the data using the helper function
     sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
 }
-
 
 void loop()
 {
