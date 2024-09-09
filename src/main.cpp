@@ -1,13 +1,11 @@
-#include <WiFi.h>
 #include <WebServer.h>
 #include "websocket.h"
+#include <SPIFFS.h>
 
 #include <ArduinoJson.h>
 
-// moisture sensor
-#include "sensors/moisture.sensor.h"
-
 #include "utils/EEPROM/EEPROM.util.h"
+#include "utils/driver/driver.h"
 
 WebServer server(80);
 
@@ -98,26 +96,10 @@ void handleSave()
 
 void testEEPROM()
 {
-    // Initialize the EEPROM utility with a size of 64 bytes (adjust if necessary)
     EEPROMUtil eepromUtil(64);
     eepromUtil.begin();
 
-    // Generate a random 32-character string
-    // String randomString = "";
-    // for (int i = 0; i < 32; i++)
-    // {
-    //     char randomChar = char(random(32, 127)); // Generate a random printable ASCII character
-    //     randomString += randomChar;
-    // }
-
-    // // Save the string to the EEPROM at address 0
-    // eepromUtil.writeString(0, randomString, 32);
-
-    // // Read the string back from the EEPROM
     String readString = eepromUtil.readString(0, 32);
-
-    // // Print the original and read strings to the serial monitor
-    // Serial.println("Original String: " + randomString);
     Serial.println("Read String: " + readString);
 }
 
@@ -126,10 +108,13 @@ void setup()
     // Start serial communication
     Serial.begin(115200);
 
-    testEEPROM();
+    if (!SPIFFS.begin(true))
+    {
+        Serial.println("Failed to mount file system");
+        return;
+    }
 
-    // Initialize moisture sensor
-    initMoistureSensor();
+    // testEEPROM();
 
     // Set up ESP32 as an access point
     WiFi.softAP("ESP32_Config_AP");
@@ -143,30 +128,46 @@ void setup()
     server.on("/save", HTTP_POST, handleSave);
 
     // Start the server
+
     server.begin();
 }
 
 void sendSensorData()
 {
     // Read the actual moisture sensor value
-    int moistureLevel = readMoistureLevel();
+    // int moistureLevel = readMoistureLevel();
 
     // Create a JSON document to hold the data
     StaticJsonDocument<256> dataDoc;
     dataDoc["sensorID"] = 0;
-    dataDoc["value"] = moistureLevel;
+    // dataDoc["value"] = moistureLevel;
 
     // Send the data using the helper function
     sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
 }
 
+void downloadZip()
+{
+    String driverUrl = "https://github.com/MityoDraganov/PlantCare-drivers/tree/main/sensors/moisture";
+    String zipFilename = "/driver.zip";
+    DriverUtil::downloadDriver(driverUrl, zipFilename);
+}
+
 void loop()
 {
+
+    server.handleClient();
     pollWebSocket();
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        return;
+    }
+
+    downloadZip();
 
     sendSensorData();
 
-    server.handleClient();
 
     delay(1000);
 }
