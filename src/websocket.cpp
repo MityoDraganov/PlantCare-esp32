@@ -25,7 +25,6 @@ void connectToWebSocket(const char *ws_server_address)
 
 void pollWebSocket()
 {
-    // If connected to the WebSocket server, listen for incoming messages
     if (wsClient.available())
     {
         wsClient.poll();
