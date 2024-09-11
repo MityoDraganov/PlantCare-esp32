@@ -11,11 +11,11 @@
 class DriverUtil {
 public:
     static void downloadDriver(const String &url, const String &filename);
-    static void unzipFile(const String &zipFilename, const String &destDir);
 
 private:
     static String constructZipUrl(const String &url);
     static void downloadZip(const String &url, const String &filename);
+    static void unzipTask(void *pvParameters);
 };
 
 #endif // DRIVER_H

@@ -13,7 +13,7 @@ void DriverUtil::downloadDriver(const String &url, const String &filename)
     if (!zipUrl.isEmpty())
     {
         downloadZip(zipUrl, filename);
-        unzipFile(filename, filename); // Unzipping to a folder in SPIFFS
+        xTaskCreate(unzipTask, "UnzipTask", 8192, (void *)"driver.zip", 1, NULL);
     }
     else
     {
@@ -26,7 +26,7 @@ String DriverUtil::constructZipUrl(const String &url)
     String zipUrl;
     if (url.indexOf("/tree/") > 0)
     {
-        // If it's a folder, extract repo and branch info
+        // Extract repo and branch info
         int repoEnd = url.indexOf("/tree/");
         String repoUrl = url.substring(0, repoEnd);
         int branchStart = repoEnd + 6; // "tree/" is 5 characters long
@@ -67,7 +67,7 @@ void DriverUtil::downloadZip(const String &url, const String &filename)
         if (file)
         {
             Serial.println("Writing file...");
-            http.writeToStream(&file); // Directly write to the file stream
+            http.writeToStream(&file);
             file.close();
             Serial.println("Downloaded " + filename);
         }
@@ -87,7 +87,7 @@ void DriverUtil::downloadZip(const String &url, const String &filename)
 
         if (httpCode == HTTP_CODE_OK)
         {
-            File file = SPIFFS.open(filename, FILE_WRITE);
+            File file = SPIFFS.open("/" + filename, FILE_WRITE);
             if (file)
             {
                 Serial.println("Writing file after redirect...");
@@ -112,52 +112,66 @@ void DriverUtil::downloadZip(const String &url, const String &filename)
 
     http.end(); // Close the connection
 }
-
-void DriverUtil::unzipFile(const String &zipFilename, const String &destDir)
+void DriverUtil::unzipTask(void *pvParameters)
 {
+    String zipFilename = (char *)pvParameters;
+    String destDir = "/";
+
     // Open the ZIP file from SPIFFS
-    File zipFile = SPIFFS.open(zipFilename, FILE_READ);
+    File zipFile = SPIFFS.open("/driver.zip", FILE_READ);
     if (!zipFile)
     {
         Serial.println("Failed to open ZIP file.");
+        vTaskDelete(NULL);
         return;
     }
 
-    // Read the ZIP file into a buffer
     size_t zipFileSize = zipFile.size();
+    if (zipFileSize == 0)
+    {
+        Serial.println("ZIP file is empty.");
+        zipFile.close();
+        vTaskDelete(NULL);
+        return;
+    }
+
     uint8_t *buffer = new uint8_t[zipFileSize];
     zipFile.read(buffer, zipFileSize);
     zipFile.close();
 
     mz_zip_archive zipArchive = {0};
 
-    // Initialize the archive
     if (!mz_zip_reader_init_mem(&zipArchive, buffer, zipFileSize, 0))
     {
         Serial.println("Failed to initialize ZIP reader.");
         delete[] buffer;
+        vTaskDelete(NULL);
         return;
     }
 
-    // Extract all files
     for (mz_uint i = 0; i < mz_zip_reader_get_num_files(&zipArchive); ++i)
     {
         mz_zip_archive_file_stat fileStat;
         if (mz_zip_reader_file_stat(&zipArchive, i, &fileStat))
         {
-            // Simplify the path to avoid directories in SPIFFS
-            String filePath = destDir + "/" + String(fileStat.m_filename);
+            String filePath = String(fileStat.m_filename);
 
-            // Remove directory components
-            if (filePath.indexOf("/") >= 0)
+            // Skip folders or directory entries
+            if (fileStat.m_is_directory)
             {
-                filePath = filePath.substring(filePath.lastIndexOf("/") + 1);
+                continue;
             }
 
+            // Ensure the file path starts with a /
+            if (!filePath.startsWith("/"))
+            {
+                filePath = "/" + filePath;
+            }
+
+            // Open the file in SPIFFS for writing
             File outFile = SPIFFS.open(filePath, FILE_WRITE);
             if (outFile)
             {
-                // Allocate buffer to hold extracted data
                 size_t fileSize = fileStat.m_uncomp_size;
                 uint8_t *fileBuffer = new uint8_t[fileSize];
                 if (mz_zip_reader_extract_to_mem(&zipArchive, i, fileBuffer, fileSize, 0))
@@ -179,7 +193,8 @@ void DriverUtil::unzipFile(const String &zipFilename, const String &destDir)
         }
     }
 
-    // Clean up
     mz_zip_reader_end(&zipArchive);
     delete[] buffer;
+
+    vTaskDelete(NULL);
 }
