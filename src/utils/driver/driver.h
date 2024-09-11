@@ -1,21 +1,21 @@
 #ifndef DRIVER_H
 #define DRIVER_H
 
-#include "driver.h"
-#include <WiFi.h>
-#include <HTTPClient.h>
 #include <FS.h>
 #include <SPIFFS.h>
-#include <miniz.h>
+#include <HTTPClient.h>
+#include <Update.h>
 
 class DriverUtil {
 public:
-    static void downloadDriver(const String &url, const String &filename);
+    DriverUtil();
+    bool handleUpdate(uint8_t* data, size_t len);
+    bool endUpdate();
 
 private:
-    static String constructZipUrl(const String &url);
-    static void downloadZip(const String &url, const String &filename);
-    static void unzipTask(void *pvParameters);
+    bool _updateStarted;
+    size_t _totalBytes;
+    size_t _receivedBytes;
 };
 
 #endif // DRIVER_H

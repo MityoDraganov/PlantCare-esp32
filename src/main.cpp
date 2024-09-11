@@ -187,14 +187,6 @@ void sendSensorData()
     sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
 }
 
-void downloadZip()
-{
-    String driverUrl = "https://github.com/MityoDraganov/PlantCare-drivers/tree/main/sensors/moisture";
-    String zipFilename = "/driver.zip";
-    DriverUtil::downloadDriver(driverUrl, zipFilename);
-
-    hasDownloadedZip = true;
-}
 
 void loop()
 {
@@ -207,10 +199,7 @@ void loop()
         return;
     }
 
-    if(!hasDownloadedZip)
-    downloadZip();
-
-    listFilesInSPIFFS("/", 0);
+    //listFilesInSPIFFS("/", 0);
 
     //sendSensorData();
 
