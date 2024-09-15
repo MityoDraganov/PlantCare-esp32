@@ -6,6 +6,7 @@
 
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/driver/driver.h"
+#include <ArduinoOTA.h>
 
 WebServer server(80);
 
@@ -87,6 +88,36 @@ void listFilesInSPIFFS(const char *dirname, uint8_t levels)
         }
         file = root.openNextFile();
     }
+}
+
+void setupOTA()
+{
+    ArduinoOTA.onStart([]()
+                       {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH)
+            type = "sketch";
+        else // U_SPIFFS
+            type = "filesystem";
+        Serial.println("Start updating " + type); });
+
+    ArduinoOTA.onEnd([]()
+                     { Serial.println("\nEnd"); });
+
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+                          { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
+
+    ArduinoOTA.onError([](ota_error_t error)
+                       {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR) Serial.println("End Failed"); });
+
+    ArduinoOTA.setPort(8266);
+    ArduinoOTA.begin(); // Initialize OTA service
 }
 
 // Function to handle the root request
@@ -171,6 +202,8 @@ void setup()
     // Start the server
 
     server.begin();
+
+    setupOTA();
 }
 
 void sendSensorData()
@@ -187,22 +220,19 @@ void sendSensorData()
     sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
 }
 
-
 void loop()
 {
-
     server.handleClient();
-    pollWebSocket();
-
     if (WiFi.status() != WL_CONNECTED)
     {
         return;
     }
 
-    //listFilesInSPIFFS("/", 0);
+    pollWebSocket();
+    ArduinoOTA.handle();
+    // listFilesInSPIFFS("/", 0);
 
-    //sendSensorData();
-
+    // sendSensorData();
 
     delay(1000);
 }
