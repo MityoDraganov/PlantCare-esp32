@@ -158,7 +158,7 @@ void handleSave()
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
 
-        connectToWebSocket("ws://192.168.0.171:8080/v1/?token=pot_1");
+        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     }
     else
     {
