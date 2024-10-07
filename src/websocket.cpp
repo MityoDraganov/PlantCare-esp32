@@ -26,11 +26,14 @@ void connectToWebSocket(const char *ws_server_address)
     }
 }
 
-void pollWebSocket()
+void pollWebSocket(const char *ws_server_address)
 {
     if (wsClient.available())
     {
         wsClient.poll();
+    } else {
+         Serial.println("Attempting connect to WebSocket server!");
+         connectToWebSocket(ws_server_address);
     }
 }
 
