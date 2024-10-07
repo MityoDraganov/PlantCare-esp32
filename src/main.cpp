@@ -1,14 +1,19 @@
 #include <WebServer.h>
+#include <DNSServer.h>
 #include "websocket.h"
 #include <SPIFFS.h>
-
 #include <ArduinoJson.h>
-
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/driver/driver.h"
 #include <ArduinoOTA.h>
 
 WebServer server(80);
+DNSServer dnsServer;
+
+const byte DNS_PORT = 53;  // DNS port
+bool webSocketConnected = false;  // WebSocket connection status
+unsigned long lastReconnectAttempt = 0;  // Time of last WebSocket reconnect attempt
+const unsigned long reconnectInterval = 5000;  // Attempt reconnection every 5 seconds
 
 // Function to get a list of available SSIDs
 String getSSIDs()
@@ -51,76 +56,6 @@ const char *index_html = R"rawliteral(
 
 bool hasDownloadedZip = false;
 
-void listFilesInSPIFFS(const char *dirname, uint8_t levels)
-{
-    Serial.printf("Listing directory: %s\n", dirname);
-
-    File root = SPIFFS.open(dirname);
-    if (!root)
-    {
-        Serial.println("Failed to open directory");
-        return;
-    }
-    if (!root.isDirectory())
-    {
-        Serial.println("Not a directory");
-        return;
-    }
-
-    File file = root.openNextFile();
-    while (file)
-    {
-        if (file.isDirectory())
-        {
-            Serial.print("  DIR : ");
-            Serial.println(file.name());
-            if (levels)
-            {
-                listFilesInSPIFFS(file.name(), levels - 1);
-            }
-        }
-        else
-        {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-        }
-        file = root.openNextFile();
-    }
-}
-
-void setupOTA()
-{
-    ArduinoOTA.onStart([]()
-                       {
-        String type;
-        if (ArduinoOTA.getCommand() == U_FLASH)
-            type = "sketch";
-        else // U_SPIFFS
-            type = "filesystem";
-        Serial.println("Start updating " + type); });
-
-    ArduinoOTA.onEnd([]()
-                     { Serial.println("\nEnd"); });
-
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
-                          { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
-
-    ArduinoOTA.onError([](ota_error_t error)
-                       {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-        else if (error == OTA_END_ERROR) Serial.println("End Failed"); });
-
-    ArduinoOTA.setPort(8266);
-    ArduinoOTA.begin(); // Initialize OTA service
-}
-
-// Function to handle the root request
 void handleRoot()
 {
     String html = index_html;
@@ -128,7 +63,6 @@ void handleRoot()
     server.send(200, "text/html", html);
 }
 
-// Function to handle the /save request
 void handleSave()
 {
     String ssid = server.arg("ssid");
@@ -151,7 +85,6 @@ void handleSave()
     }
     Serial.println("");
 
-    // Check if connected
     if (WiFi.status() == WL_CONNECTED)
     {
         Serial.println("Connected to Wi-Fi!");
@@ -159,6 +92,7 @@ void handleSave()
         Serial.println(WiFi.localIP());
 
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
+        webSocketConnected = true;  // Mark WebSocket as connected
     }
     else
     {
@@ -166,18 +100,40 @@ void handleSave()
     }
 }
 
-void testEEPROM()
+void setupOTA()
 {
-    EEPROMUtil eepromUtil(64);
-    eepromUtil.begin();
+    ArduinoOTA.onStart([]()
+    {
+        String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+        Serial.println("Start updating " + type);
+    });
 
-    String readString = eepromUtil.readString(0, 32);
-    Serial.println("Read String: " + readString);
+    ArduinoOTA.onEnd([]()
+    {
+        Serial.println("\nEnd");
+    });
+
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+    {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+
+    ArduinoOTA.onError([](ota_error_t error)
+    {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+    ArduinoOTA.setPort(8266);
+    ArduinoOTA.begin(); // Initialize OTA service
 }
 
 void setup()
 {
-    // Start serial communication
     Serial.begin(115200);
 
     if (!SPIFFS.begin(true))
@@ -186,53 +142,34 @@ void setup()
         return;
     }
 
-    // testEEPROM();
-
-    // Set up ESP32 as an access point
     WiFi.softAP("ESP32_Config_AP");
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
-    // Print the IP address of the access point
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
 
     // Define routes
     server.on("/", HTTP_GET, handleRoot);
     server.on("/save", HTTP_POST, handleSave);
-
-    // Start the server
+    server.onNotFound(handleRoot);  // Redirect all unknown URLs to the captive portal
 
     server.begin();
 
     setupOTA();
 }
 
-void sendSensorData()
-{
-    // Read the actual moisture sensor value
-    // int moistureLevel = readMoistureLevel();
-
-    // Create a JSON document to hold the data
-    StaticJsonDocument<256> dataDoc;
-    dataDoc["sensorID"] = 0;
-    // dataDoc["value"] = moistureLevel;
-
-    // Send the data using the helper function
-    sendWebSocketMessage("HandleMeasurements", dataDoc.as<JsonObject>());
-}
-
 void loop()
 {
+    
     server.handleClient();
+
     if (WiFi.status() != WL_CONNECTED)
     {
         return;
     }
+    pollWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
 
-    pollWebSocket();
+
     ArduinoOTA.handle();
-    // listFilesInSPIFFS("/", 0);
-
-    // sendSensorData();
-
     delay(1000);
 }

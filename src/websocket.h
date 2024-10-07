@@ -5,7 +5,7 @@
 #include "utils/driver/driver.h"
 
 void connectToWebSocket(const char* ws_server_address);
-void pollWebSocket();
+void pollWebSocket(const char* ws_server_address);
 
 void sendWebSocketMessage(const char* event, const JsonObject& data);
 void receiveWebSocketMessage(const String &message, bool isBinary);
