@@ -6,14 +6,16 @@
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/driver/driver.h"
 #include <ArduinoOTA.h>
+#include "drivers/SensorManager/SensorManager.h"
+#include "drivers/MoistureSensor/MoistureSensor.h"
 
 WebServer server(80);
 DNSServer dnsServer;
 
-const byte DNS_PORT = 53;  // DNS port
-bool webSocketConnected = false;  // WebSocket connection status
-unsigned long lastReconnectAttempt = 0;  // Time of last WebSocket reconnect attempt
-const unsigned long reconnectInterval = 5000;  // Attempt reconnection every 5 seconds
+const byte DNS_PORT = 53;                     // DNS port
+bool webSocketConnected = false;              // WebSocket connection status
+unsigned long lastReconnectAttempt = 0;       // Time of last WebSocket reconnect attempt
+const unsigned long reconnectInterval = 5000; // Attempt reconnection every 5 seconds
 
 // Function to get a list of available SSIDs
 String getSSIDs()
@@ -92,7 +94,7 @@ void handleSave()
         Serial.println(WiFi.localIP());
 
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-        webSocketConnected = true;  // Mark WebSocket as connected
+        webSocketConnected = true; // Mark WebSocket as connected
     }
     else
     {
@@ -103,30 +105,24 @@ void handleSave()
 void setupOTA()
 {
     ArduinoOTA.onStart([]()
-    {
+                       {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-        Serial.println("Start updating " + type);
-    });
+        Serial.println("Start updating " + type); });
 
     ArduinoOTA.onEnd([]()
-    {
-        Serial.println("\nEnd");
-    });
+                     { Serial.println("\nEnd"); });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
-    {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
+                          { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
 
     ArduinoOTA.onError([](ota_error_t error)
-    {
+                       {
         Serial.printf("Error[%u]: ", error);
         if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
         else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
         else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
         else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-        else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
+        else if (error == OTA_END_ERROR) Serial.println("End Failed"); });
 
     ArduinoOTA.setPort(8266);
     ArduinoOTA.begin(); // Initialize OTA service
@@ -135,6 +131,13 @@ void setupOTA()
 void setup()
 {
     Serial.begin(115200);
+
+    // Now the moisture sensor should be in the sensor manager
+    for (Sensor *sensor : SensorManager::getAllSensors())
+    {
+        Serial.println("Found sensor: " + String(sensor->getType()));
+        sensor->init();
+    }
 
     if (!SPIFFS.begin(true))
     {
@@ -151,7 +154,7 @@ void setup()
     // Define routes
     server.on("/", HTTP_GET, handleRoot);
     server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound(handleRoot);  // Redirect all unknown URLs to the captive portal
+    server.onNotFound(handleRoot); // Redirect all unknown URLs to the captive portal
 
     server.begin();
 
@@ -160,7 +163,10 @@ void setup()
 
 void loop()
 {
-    
+    for (Sensor *sensor : SensorManager::getAllSensors())
+    {
+        Serial.println(String(sensor->getType()) + String(sensor->readValue()));
+    }
     server.handleClient();
 
     if (WiFi.status() != WL_CONNECTED)
@@ -168,7 +174,6 @@ void loop()
         return;
     }
     pollWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-
 
     ArduinoOTA.handle();
     delay(1000);
