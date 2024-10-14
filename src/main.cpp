@@ -7,7 +7,6 @@
 #include "utils/driver/driver.h"
 #include <ArduinoOTA.h>
 #include "drivers/SensorManager/SensorManager.h"
-#include "drivers/MoistureSensor/MoistureSensor.h"
 
 WebServer server(80);
 DNSServer dnsServer;
@@ -16,6 +15,7 @@ const byte DNS_PORT = 53;                     // DNS port
 bool webSocketConnected = false;              // WebSocket connection status
 unsigned long lastReconnectAttempt = 0;       // Time of last WebSocket reconnect attempt
 const unsigned long reconnectInterval = 5000; // Attempt reconnection every 5 seconds
+EEPROMUtil eepromUtil(0x50); 
 
 // Function to get a list of available SSIDs
 String getSSIDs()
@@ -55,8 +55,6 @@ const char *index_html = R"rawliteral(
 </body>
 </html>
 )rawliteral";
-
-bool hasDownloadedZip = false;
 
 void handleRoot()
 {
@@ -130,6 +128,8 @@ void setupOTA()
 
 void setup()
 {
+    eepromUtil.begin();
+
     Serial.begin(115200);
 
     // Now the moisture sensor should be in the sensor manager
@@ -165,8 +165,10 @@ void loop()
 {
     for (Sensor *sensor : SensorManager::getAllSensors())
     {
-        Serial.println(String(sensor->getType()) + String(sensor->readValue()));
+        Serial.println(String(sensor->getType()) + ": " + String(sensor->readValue()));
     }
+
+
     server.handleClient();
 
     if (WiFi.status() != WL_CONNECTED)
@@ -176,5 +178,5 @@ void loop()
     pollWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
 
     ArduinoOTA.handle();
-    delay(1000);
+    delay(2000);
 }
