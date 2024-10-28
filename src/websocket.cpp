@@ -1,24 +1,24 @@
 #include <ArduinoWebsockets.h>
 #include <ArduinoJson.h>
-#include <WiFi.h>
 #include "websocket.h"
 #include "utils/driver/driver.h"
-
+#include "drivers/SensorManager/SensorManager.h"
 
 using namespace websockets;
 
-WebsocketsClient wsClient; // WebSocket client
+WebsocketsClient wsClient;
 DriverUtil driverUtil;
 
 void connectToWebSocket(const char *ws_server_address)
 {
-    // Attempt to connect to the WebSocket server
     if (wsClient.connect(ws_server_address))
     {
         Serial.println("Connected to WebSocket server!");
 
         wsClient.onMessage([](WebsocketsMessage message)
-                           { Serial.println("Received: " + message.data()); });
+        { 
+            receiveWebSocketMessage(message.data(), message.isBinary()); 
+        });
     }
     else
     {
@@ -31,9 +31,11 @@ void pollWebSocket(const char *ws_server_address)
     if (wsClient.available())
     {
         wsClient.poll();
-    } else {
-         Serial.println("Attempting connect to WebSocket server!");
-         connectToWebSocket(ws_server_address);
+    } 
+    else 
+    {
+        Serial.println("Attempting to connect to WebSocket server!");
+        connectToWebSocket(ws_server_address);
     }
 }
 
@@ -45,11 +47,8 @@ void sendWebSocketMessage(const char *event, const JsonObject &data)
         doc["Event"] = event;
         doc["Data"] = data;
 
-        // Serialize JSON document to string
         String message;
         serializeJson(doc, message);
-
-        // Send the JSON string over WebSocket
         wsClient.send(message);
         Serial.println("Sent: " + message);
     }
@@ -59,18 +58,68 @@ void sendWebSocketMessage(const char *event, const JsonObject &data)
     }
 }
 
-void receiveWebSocketMessage(const String &message, bool isBinary) {
-    if (isBinary) {
-        Serial.println("Received firmware binary data.");
+// Handles incoming WebSocket messages and processes commands
+void receiveWebSocketMessage(const String &message, bool isBinary)
+{
+    if (isBinary)
+    {
+        Serial.println("Received binary data.");
         size_t len = message.length();
-        uint8_t* firmwareData = new uint8_t[len];
+        uint8_t *firmwareData = new uint8_t[len];
         message.getBytes(firmwareData, len);
-
-        // Initialize the OTA update process
         driverUtil.handleUpdate(firmwareData, len);
         delete[] firmwareData;
-
-    } else {
+    }
+    else
+    {
         Serial.println("Received non-binary message: " + message);
+        
+        StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, message);
+        if (error)
+        {
+            Serial.println("Failed to parse JSON message.");
+            return;
+        }
+
+        const char *command = doc["command"];
+        if (strcmp(command, "readAllSensorData") == 0)
+        {
+            sendSensorData();
+        }
+        else
+        {
+            Serial.println("Unknown command received.");
+        }
+    }
+}
+
+void sendSensorData()
+{
+    if (wsClient.available())
+    {
+        // Create a JSON array to hold all sensor data
+        StaticJsonDocument<512> doc;
+        JsonArray sensorArray = doc.to<JsonArray>();
+
+        // Iterate over all sensors and collect their data
+        for (Sensor *sensor : SensorManager::getAllSensors())
+        {
+            JsonObject sensorData = sensorArray.createNestedObject();
+            sensorData["sensor"] = sensor->getType();
+            sensorData["data"] = sensor->readValue();
+        }
+
+        // Serialize the JSON document to a string
+        String jsonData;
+        serializeJson(doc, jsonData);
+
+        // Send the JSON string over WebSocket
+        wsClient.send(jsonData);
+        Serial.println("Sent sensor data: " + jsonData);
+    }
+    else
+    {
+        Serial.println("WebSocket is not connected.");
     }
 }
