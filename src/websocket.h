@@ -9,5 +9,6 @@ void pollWebSocket(const char* ws_server_address);
 
 void sendWebSocketMessage(const char* event, const JsonObject& data);
 void receiveWebSocketMessage(const String &message, bool isBinary);
+void sendSensorData(); // New function declaration
 
 #endif // WEBSOCKET_H

@@ -5,22 +5,28 @@
 #include <ArduinoJson.h>
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/driver/driver.h"
+#include "utils/Multiplexer/Multiplexer.h"
 #include <ArduinoOTA.h>
 #include "drivers/SensorManager/SensorManager.h"
+#include <random>
 
 WebServer server(80);
-DNSServer dnsServer;
+String generateSerialNumber(int length);
+EEPROMUtil eepromUtil(0x50);
+bool webSocketConnected = false;
+unsigned long lastReconnectAttempt = 0;
+const unsigned long reconnectInterval = 5000;
 
-const byte DNS_PORT = 53;                     // DNS port
-bool webSocketConnected = false;              // WebSocket connection status
-unsigned long lastReconnectAttempt = 0;       // Time of last WebSocket reconnect attempt
-const unsigned long reconnectInterval = 5000; // Attempt reconnection every 5 seconds
-EEPROMUtil eepromUtil(0x50); 
+const int EEPROM_SSID_ADDR = 0;
+const int EEPROM_PASS_ADDR = 64;
+const int EEPROM_MAX_LEN = 32;
 
-// Function to get a list of available SSIDs
+const int NUM_MUX_CHANNELS = 4;
+
 String getSSIDs()
 {
     String ssids = "";
+    WiFi.disconnect();
     int n = WiFi.scanNetworks();
     if (n == 0)
     {
@@ -75,9 +81,8 @@ void handleSave()
     String response = "Trying to connect to " + ssid + "...";
     server.send(200, "text/plain", response);
 
-    // Attempt to connect for a limited time (e.g., 10 seconds)
-    int timeout = 10000; // 10 seconds
-    int startTime = millis();
+    int timeout = 15000;
+    unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeout)
     {
         delay(500);
@@ -91,14 +96,47 @@ void handleSave()
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
 
-        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-        webSocketConnected = true; // Mark WebSocket as connected
+        // WebSocket or other functionality here
+        webSocketConnected = true;
     }
     else
     {
         Serial.println("Failed to connect to Wi-Fi.");
     }
 }
+
+// void connectToStoredWiFi()
+// {
+//     String ssid, password;
+
+//     // Load Wi-Fi credentials from EEPROM
+//     if (eepromUtil.loadWiFiCredentials(ssid, password))
+//     {
+//         Serial.println("Attempting to connect to saved Wi-Fi...");
+//         WiFi.begin(ssid.c_str(), password.c_str());
+
+//         // Attempt to connect with a timeout
+//         unsigned long startTime = millis();
+//         int timeout = 10000; // 10 seconds
+//         while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeout)
+//         {
+//             delay(500);
+//             Serial.print(".");
+//         }
+
+//         if (WiFi.status() == WL_CONNECTED)
+//         {
+//             Serial.println("Connected to Wi-Fi!");
+//             Serial.print("IP Address: ");
+//             Serial.println(WiFi.localIP());
+//             return;
+//         }
+//         else
+//         {
+//             Serial.println("Failed to connect to saved Wi-Fi.");
+//         }
+//     }
+// }
 
 void setupOTA()
 {
@@ -128,11 +166,39 @@ void setupOTA()
 
 void setup()
 {
-    eepromUtil.begin();
-
+    Wire.begin();
     Serial.begin(115200);
 
-    // Now the moisture sensor should be in the sensor manager
+    eepromUtil.begin();
+    WiFi.mode(WIFI_STA);
+
+    Serial.println("Starting AP mode...");
+    WiFi.softAP("ESP32_Config_AP");
+    Serial.print("AP IP Address: ");
+    Serial.println(WiFi.softAPIP());
+
+    int serialNumLenght = 16; // Maximum length
+    // for (int i = 0; i < NUM_MUX_CHANNELS; i++)
+    // {
+    //     String serialNumber = generateSerialNumber(serialNumLenght);
+    //     eepromUtil.writeStringExternal(0, serialNumber, serialNumLenght, i);
+    //     Serial.print("Written Serial Number for Channel ");
+    //     Serial.print(i);
+    //     Serial.print(": ");
+    //     Serial.println(serialNumber);
+    // }
+
+    for (int i = 0; i < NUM_MUX_CHANNELS; i++)
+    {
+        String serialNumber = eepromUtil.readStringExternal(0, serialNumLenght, i);
+        if(serialNumber != ""){
+        Serial.print("Read Serial Number for Channel ");
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(serialNumber);
+        }
+    }
+
     for (Sensor *sensor : SensorManager::getAllSensors())
     {
         Serial.println("Found sensor: " + String(sensor->getType()));
@@ -144,17 +210,9 @@ void setup()
         Serial.println("Failed to mount file system");
         return;
     }
-
-    WiFi.softAP("ESP32_Config_AP");
-    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-
-    Serial.print("AP IP Address: ");
-    Serial.println(WiFi.softAPIP());
-
-    // Define routes
     server.on("/", HTTP_GET, handleRoot);
     server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound(handleRoot); // Redirect all unknown URLs to the captive portal
+    server.onNotFound(handleRoot);
 
     server.begin();
 
@@ -163,13 +221,11 @@ void setup()
 
 void loop()
 {
-    for (Sensor *sensor : SensorManager::getAllSensors())
-    {
-        Serial.println(String(sensor->getType()) + ": " + String(sensor->readValue()));
-    }
-
-
     server.handleClient();
+    // for (Sensor *sensor : SensorManager::getAllSensors())
+    // {
+    //     Serial.println(String(sensor->getType()) + ": " + String(sensor->readValue()));
+    // }
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -179,4 +235,21 @@ void loop()
 
     ArduinoOTA.handle();
     delay(2000);
+}
+
+std::mt19937 generator;
+String generateSerialNumber(int length)
+{
+    const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    String serialNumber;
+
+    // Use the global random generator (already seeded in setup)
+    std::uniform_int_distribution<> distribution(0, characters.length() - 1);
+
+    for (int i = 0; i < length; ++i)
+    {
+        serialNumber += characters[distribution(generator)];
+    }
+
+    return serialNumber;
 }

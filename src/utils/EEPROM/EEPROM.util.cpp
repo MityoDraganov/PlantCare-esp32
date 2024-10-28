@@ -1,72 +1,155 @@
-#include "utils/EEPROM/EEPROM.util.h"
-#include <Arduino.h>
+#include "utils///EEPROM///EEPROM.util.h"
+#include "utils/Multiplexer/Multiplexer.h"
 
-EEPROMUtil::EEPROMUtil(uint8_t deviceAddress) : _deviceAddress(deviceAddress) {}
+Multiplexer mux(12, 13);
 
-void EEPROMUtil::begin() {
-    Wire.begin(25, 26); // Initialize I2C communication with custom SDA and SCL pins
+EEPROMUtil::EEPROMUtil(uint8_t eepromAddress) : _eepromAddress(eepromAddress) {}
+
+void EEPROMUtil::begin()
+{
+    mux.begin();
+    EEPROM.begin(512);
 }
 
-void EEPROMUtil::writeByte(int address, byte data) {
-    Wire.beginTransmission(_deviceAddress); // Begin transmission to the EEPROM
-    Wire.write((address >> 8) & 0xFF); // Write high byte of address
-    Wire.write(address & 0xFF);        // Write low byte of address
-    Wire.write(data);                  // Write the data byte
-    Wire.endTransmission();            // End transmission
-    delay(5);                          // Wait for the write cycle to complete (necessary for EEPROMs)
+//--------------- External //EEPROM Functions (via I2C) --------------- //
+
+void EEPROMUtil::writeByteExternal(int address, byte data, uint8_t muxChannel)
+{
+    mux.selectChannel(muxChannel);
+
+    Wire.beginTransmission(0x50);
+    Wire.write((int)(address >> 8));
+    Wire.write((int)(address & 0xFF));
+    Wire.write(data);
+    Wire.endTransmission();
+    delay(5); // External //EEPROM write delay (timing requirement)
 }
 
-byte EEPROMUtil::readByte(int address) {
-    Wire.beginTransmission(_deviceAddress);
-    Wire.write((address >> 8) & 0xFF); // Write high byte of address
-    Wire.write(address & 0xFF);        // Write low byte of address
-    Wire.endTransmission();            // End transmission
-
-    Wire.requestFrom(_deviceAddress, 1); // Request 1 byte from the EEPROM
-    return Wire.read();                 // Read and return the byte
+bool isDevicePresent(uint8_t channel, uint8_t deviceAddress) {
+     mux.selectChannel(channel);
+    Wire.beginTransmission(deviceAddress);
+    return (Wire.endTransmission() == 0);  // Returns true if device acknowledges
 }
 
-void EEPROMUtil::writeInt(int address, int value) {
-    writeByte(address, (value >> 8) & 0xFF);    // High byte
-    writeByte(address + 1, value & 0xFF);       // Low byte
+
+byte EEPROMUtil::readByteExternal(int address, uint8_t muxChannel) {
+    if (!isDevicePresent(muxChannel, 0x50)) {
+        Serial.print("No device found on MUX channel ");
+        Serial.println(muxChannel);
+        return 0xFF; // Indicate no valid data found
+    }
+    mux.selectChannel(muxChannel);
+    Wire.beginTransmission(0x50);
+    Wire.write((int)(address >> 8));       // MSB of address
+    Wire.write((int)(address & 0xFF));     // LSB of address
+    uint8_t transmissionResult = Wire.endTransmission();
+
+    // Check for transmission error 263
+    if (transmissionResult == 263) {
+        Serial.print("No device on channel ");
+        Serial.println(muxChannel);
+        return 0xFF; // Skip to next channel
+    } else if (transmissionResult != 0) {
+        Serial.print("I2C Read Error on MUX Channel ");
+        Serial.print(muxChannel);
+        Serial.print(" with error code: ");
+        Serial.println(transmissionResult);
+        return 0xFF; // Return error code (no valid data found)
+    }
+
+    Wire.requestFrom(0x50, 1);
+    if (Wire.available()) {
+        return Wire.read();
+    }
+
+    return 0xFF; // Return error code (no data available)
 }
 
-int EEPROMUtil::readInt(int address) {
-    int value = (readByte(address) << 8) | readByte(address + 1);
-    return value;
-}
+void EEPROMUtil::writeStringExternal(int address, const String &value, int maxLength, uint8_t muxChannel)
+{
+    int len = value.length();
+    if (len > maxLength)
+        len = maxLength;
 
-void EEPROMUtil::writeFloat(int address, float value) {
-    byte *p = (byte *)(void *)&value;
-    for (int i = 0; i < sizeof(value); i++) {
-        writeByte(address + i, *p++);
+    for (int i = 0; i < len; i++)
+    {
+        writeByteExternal(address + i, value[i], muxChannel);
+    }
+    for (int i = len; i < maxLength; i++)
+    {
+        writeByteExternal(address + i, 0, muxChannel); // Pad with null bytes
     }
 }
 
-float EEPROMUtil::readFloat(int address) {
-    float value = 0.0;
-    byte *p = (byte *)(void *)&value;
-    for (int i = 0; i < sizeof(value); i++) {
-        *p++ = readByte(address + i);
+String EEPROMUtil::readStringExternal(int address, int maxLength, uint8_t muxChannel)
+{
+    // Check if the device is present once at the start
+    if (!isDevicePresent(muxChannel, 0x50)) {
+        Serial.print("No device found on MUX channel ");
+        Serial.println(muxChannel);
+        return ""; // Return an empty string if the device is not present
     }
-    return value;
-}
 
-void EEPROMUtil::writeString(int address, const String &value, int length) {
-    for (int i = 0; i < length; i++) {
-        if (i < value.length()) {
-            writeByte(address + i, value[i]);
-        } else {
-            writeByte(address + i, 0); // Write null character if the string is shorter than the length
-        }
+    char data[maxLength + 1];
+    for (int i = 0; i < maxLength; i++)
+    {
+        data[i] = readByteExternal(address + i, muxChannel);
     }
-}
-
-String EEPROMUtil::readString(int address, int length) {
-    char data[length + 1];
-    for (int i = 0; i < length; i++) {
-        data[i] = readByte(address + i);
-    }
-    data[length] = '\0'; // Null-terminate the string
+    data[maxLength] = '\0'; // Null-terminate the string
     return String(data);
+}
+
+
+//--------------- Internal //EEPROM Functions (for WiFi Credentials) --------------- //
+
+void EEPROMUtil::writeByteInternal(int address, byte data)
+{
+    EEPROM.write(address, data);
+    EEPROM.commit(); // Commit to internal //EEPROM
+}
+
+byte EEPROMUtil::readByteInternal(int address)
+{
+    return EEPROM.read(address);
+}
+
+void EEPROMUtil::writeStringInternal(int address, const String &value, int maxLength)
+{
+    int len = value.length();
+    if (len > maxLength)
+        len = maxLength;
+
+    for (int i = 0; i < len; i++)
+    {
+        writeByteInternal(address + i, value[i]);
+    }
+    for (int i = len; i < maxLength; i++)
+    {
+        writeByteInternal(address + i, 0); // Pad with null bytes
+    }
+    EEPROM.commit();
+}
+
+String EEPROMUtil::readStringInternal(int address, int maxLength)
+{
+    char data[maxLength + 1];
+    for (int i = 0; i < maxLength; i++)
+    {
+        data[i] = readByteInternal(address + i);
+    }
+    data[maxLength] = '\0'; // Null-terminate the string
+    return String(data);
+}
+
+void EEPROMUtil::saveWiFiCredentials(const String &ssid, const String &password)
+{
+    writeStringInternal(SSID_ADDRESS, ssid, MAX_SSID_LENGTH);
+    writeStringInternal(PASSWORD_ADDRESS, password, MAX_PASSWORD_LENGTH);
+}
+
+bool EEPROMUtil::loadWiFiCredentials(String &ssid, String &password)
+{
+    ssid = readStringInternal(SSID_ADDRESS, MAX_SSID_LENGTH);
+    password = readStringInternal(PASSWORD_ADDRESS, MAX_PASSWORD_LENGTH);
+    return ssid.length() > 0 && password.length() > 0; // Ensure valid credentials
 }
