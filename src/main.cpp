@@ -3,16 +3,18 @@
 #include "websocket.h"
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
-#include "utils/EEPROM/EEPROM.util.h"
 #include "utils/driver/driver.h"
 #include "utils/Multiplexer/Multiplexer.h"
 #include <ArduinoOTA.h>
 #include "drivers/SensorManager/SensorManager.h"
+#include "utils/EEPROM/EEPROM.util.h"
 #include <random>
+#include "utils/Module/Module.util.h"
+#include <Wire.h>
 
 WebServer server(80);
+ModuleUtil moduleUtil(32);
 String generateSerialNumber(int length);
-EEPROMUtil eepromUtil(0x50);
 bool webSocketConnected = false;
 unsigned long lastReconnectAttempt = 0;
 const unsigned long reconnectInterval = 5000;
@@ -20,8 +22,6 @@ const unsigned long reconnectInterval = 5000;
 const int EEPROM_SSID_ADDR = 0;
 const int EEPROM_PASS_ADDR = 64;
 const int EEPROM_MAX_LEN = 32;
-
-const int NUM_MUX_CHANNELS = 4;
 
 String getSSIDs()
 {
@@ -166,10 +166,10 @@ void setupOTA()
 
 void setup()
 {
+    EEPROMUtil eepromUtil(0x50);
+    eepromUtil.begin();
     Wire.begin();
     Serial.begin(115200);
-
-    eepromUtil.begin();
     WiFi.mode(WIFI_STA);
 
     Serial.println("Starting AP mode...");
@@ -177,26 +177,14 @@ void setup()
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
 
-    int serialNumLenght = 16; // Maximum length
-    // for (int i = 0; i < NUM_MUX_CHANNELS; i++)
-    // {
-    //     String serialNumber = generateSerialNumber(serialNumLenght);
-    //     eepromUtil.writeStringExternal(0, serialNumber, serialNumLenght, i);
-    //     Serial.print("Written Serial Number for Channel ");
-    //     Serial.print(i);
-    //     Serial.print(": ");
-    //     Serial.println(serialNumber);
-    // }
-
-    for (int i = 0; i < NUM_MUX_CHANNELS; i++)
+    for (int i = 0; i < 4; i++)
     {
-        String serialNumber = eepromUtil.readStringExternal(0, serialNumLenght, i);
-        if(serialNumber != ""){
-        Serial.print("Read Serial Number for Channel ");
+        String serialNumber = generateSerialNumber(16);
+        eepromUtil.writeStringExternal(0, serialNumber, 16, i);
+        Serial.print("Written Serial Number for Channel ");
         Serial.print(i);
         Serial.print(": ");
         Serial.println(serialNumber);
-        }
     }
 
     for (Sensor *sensor : SensorManager::getAllSensors())
@@ -227,6 +215,9 @@ void loop()
     //     Serial.println(String(sensor->getType()) + ": " + String(sensor->readValue()));
     // }
 
+    moduleUtil.readModules();
+    delay(5000);
+
     if (WiFi.status() != WL_CONNECTED)
     {
         return;
@@ -234,7 +225,6 @@ void loop()
     pollWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
 
     ArduinoOTA.handle();
-    delay(2000);
 }
 
 std::mt19937 generator;

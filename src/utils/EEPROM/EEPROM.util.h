@@ -17,7 +17,6 @@ public:
     byte readByteExternal(int address, uint8_t muxChannel);
     void writeStringExternal(int address, const String &value, int maxLength, uint8_t muxChannel);
     String readStringExternal(int address, int maxLength, uint8_t muxChannel);
-
     // Internal EEPROM methods (for WiFi credentials)
     void saveWiFiCredentials(const String &ssid, const String &password);
     bool loadWiFiCredentials(String &ssid, String &password);
