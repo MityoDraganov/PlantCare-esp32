@@ -123,3 +123,19 @@ void sendSensorData()
         Serial.println("WebSocket is not connected.");
     }
 }
+
+void sendSensorAttachEvent(String serialNumber) {
+    if (wsClient.available()) {
+        StaticJsonDocument<256> doc;
+        doc["event"] = "SensorAttached";
+        JsonObject data = doc.createNestedObject("data");
+        data["serialNumber"] = serialNumber;
+
+        String message;
+        serializeJson(doc, message);
+        wsClient.send(message);
+        Serial.println("Sent sensor attach event: " + message);
+    } else {
+        Serial.println("WebSocket not connected. Cannot send sensor attach event.");
+    }
+}

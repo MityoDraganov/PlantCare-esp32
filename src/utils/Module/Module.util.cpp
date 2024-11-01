@@ -3,6 +3,8 @@
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/SerialManager/SerialManager.h"
 
+#include "websocket.h"
+
 EEPROMUtil eepromUtil(0x50);
 SerialManager serialManager; // Corrected declaration
 
@@ -30,6 +32,7 @@ void ModuleUtil::readModules()
             if (!serialManager.isSerialKnown(serialNumber))
             {
                 serialManager.updateSerialNumber(serialNumber, i);
+                sendSensorAttachEvent(serialNumber);
                 Serial.print("Added new serial: ");
                 Serial.println(serialNumber);
             }
