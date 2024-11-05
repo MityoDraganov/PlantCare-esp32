@@ -6,7 +6,7 @@
 #include "websocket.h"
 
 EEPROMUtil eepromUtil(0x50);
-SerialManager serialManager; // Corrected declaration
+SerialManager serialManager;
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
 

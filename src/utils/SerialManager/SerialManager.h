@@ -16,6 +16,8 @@ public:
     void printAllSerials() const;
     std::map<String, SerialInfo> getAllSerials() const;
     void removeSerialNumber(const String& serialNumber);
+    int getGPIOPinForSerial(const String& serialNumber) const;
+
 
 private:
     std::map<String, SerialInfo> _serialMap;
