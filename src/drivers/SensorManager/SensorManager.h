@@ -12,6 +12,7 @@ public:
     static Sensor* getSensorByType(const char *type);
     static std::vector<Sensor *> &getAllSensors();
     static void initializeSensors();
+    static void readAllSensors();
 
 private:
     std::vector<Sensor *> sensors;

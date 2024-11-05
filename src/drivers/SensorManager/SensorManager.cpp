@@ -2,9 +2,26 @@
 #include "drivers/SensorFactory.h"
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/SerialManager/SerialManager.h"
+#include <ArduinoJson.h>
 
 const int channelToGPIO[] = {32, 33, 34, 35};
 extern std::map<String, String> sensorConfig;
+
+extern DynamicJsonDocument jsonDoc;
+extern SerialManager serialManager; 
+
+const char *findKeyByValue(const String &searchValue)
+{
+    for (JsonPair kv : jsonDoc.as<JsonObject>())
+    {
+        // If the value matches the search value
+        if (kv.value().as<String>() == searchValue)
+        {
+            return kv.key().c_str(); // Return the key as a C-string
+        }
+    }
+    return nullptr; // Return null if no match is found
+}
 
 void SensorManager::registerSensor(Sensor *sensor)
 {
@@ -31,28 +48,40 @@ std::vector<Sensor *> &SensorManager::getAllSensors()
 
 void SensorManager::initializeSensors()
 {
-    SerialManager serialManager;
-    auto serials = serialManager.getAllSerials(); // Assuming this provides serials and channels
+    auto serials = serialManager.getAllSerials();
+    serialManager.printAllSerials();
 
-    for (const auto &[serialNumber, channel] : serials)
+    for (Sensor *sensor : SensorManager::getAllSensors())
     {
+        Serial.println("Found sensor: " + String(sensor->getType()));
+        String sensorType = sensor->getType();
+
+        String serialNumber = findKeyByValue(sensorType);
+        Serial.println("serialNumber");
+        Serial.println(serialNumber);
+
         int gpioPin = serialManager.getGPIOPinForSerial(serialNumber);
 
-        // Sensor *sensor = SensorFactory::getInstance().createSensor(sensorType.c_str(), serialNumber, gpioPin);
-        // if (sensor)
-        // {
-        //     sensor->init();
-        //     registerSensor(sensor);
-        // }
-        // else
-        // {
-        //     Serial.println("Unknown sensor type: " + sensorType);
-        // }
-    }
-        for (const auto& [serialNumber, sensorType] : sensorConfig)
-    {
-        Serial.println("SensorConfig - Serial: " + serialNumber + ", Type: " + sensorType);
+        Serial.println("gpioPin");
+        Serial.println(gpioPin);
+
+        sensor->init(gpioPin);
     }
 }
 
 
+void SensorManager::readAllSensors() {
+    for (Sensor *sensor : getInstance().sensors) {
+        if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
+            int value = sensor->readValue(); // Read the sensor value
+            Serial.print("Sensor Type: ");
+            Serial.print(sensor->getType());
+            Serial.print(" | Value: ");
+            Serial.println(value);
+        } else {
+            Serial.print("Sensor Type: ");
+            Serial.print(sensor->getType());
+            Serial.println(" | GPIO not initialized.");
+        }
+    }
+}
