@@ -10,9 +10,6 @@ void EEPROMUtil::begin()
     mux.begin();
     EEPROM.begin(512);
 }
-
-//--------------- External //EEPROM Functions (via I2C) --------------- //
-
 void EEPROMUtil::writeByteExternal(int address, byte data, uint8_t muxChannel)
 {
     mux.selectChannel(muxChannel);
@@ -46,14 +43,8 @@ byte EEPROMUtil::readByteExternal(int address, uint8_t muxChannel) {
 
     // Check for transmission error 263
     if (transmissionResult == 263) {
-        Serial.print("No device on channel ");
-        Serial.println(muxChannel);
         return 0xFF; // Skip to next channel
     } else if (transmissionResult != 0) {
-        Serial.print("I2C Read Error on MUX Channel ");
-        Serial.print(muxChannel);
-        Serial.print(" with error code: ");
-        Serial.println(transmissionResult);
         return 0xFF; // Return error code (no valid data found)
     }
 
@@ -85,8 +76,6 @@ String EEPROMUtil::readStringExternal(int address, int maxLength, uint8_t muxCha
 {
     // Check if the device is present once at the start
     if (!isDevicePresent(muxChannel, 0x50)) {
-        Serial.print("No device found on MUX channel ");
-        Serial.println(muxChannel);
         return ""; // Return an empty string if the device is not present
     }
 

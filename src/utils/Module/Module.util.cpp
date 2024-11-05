@@ -10,43 +10,46 @@ SerialManager serialManager; // Corrected declaration
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
 
+bool isValidSerialNumber(const String &serialNumber) {
+    for (char c : serialNumber) {
+        // Check if character is not alphanumeric
+        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))) {
+            return false; // Invalid character found
+        }
+    }
+    return true; // All characters are valid
+}
+
+
 void ModuleUtil::readModules()
 {
     std::set<String> knownSerials; // Correctly declare knownSerials
-    
+
     for (int i = 0; i < NUM_MUX_CHANNELS; i++)
     {
         String serialNumber = eepromUtil.readStringExternal(0, SERIAL_NUM_LENGTH, i);
-       
 
-        if (serialNumber != "")
+        if (serialNumber != "" && isValidSerialNumber(serialNumber))
         {
-            Serial.print("Read serial for Channel ");
-            Serial.print(i);
-            Serial.print(": ");
-            Serial.println(serialNumber);
 
             knownSerials.insert(serialNumber); // Keep track of read serials
-            
-            // If the serial number is new, add it to the SerialManager
+
             if (!serialManager.isSerialKnown(serialNumber))
             {
                 serialManager.updateSerialNumber(serialNumber, i);
                 sendSensorAttachEvent(serialNumber);
-                Serial.print("Added new serial: ");
-                Serial.println(serialNumber);
             }
         }
     }
 
     // Remove serial numbers that were previously known but are no longer present
-    for (const auto& pair : serialManager.getAllSerials())
+    for (const auto &pair : serialManager.getAllSerials())
     {
         if (knownSerials.find(pair.first) == knownSerials.end())
         {
-            // If the serial number is not found in knownSerials, remove it
             Serial.print("Removing serial: ");
             Serial.println(pair.first);
+            sendSensorDetachEvent(pair.first);
             serialManager.removeSerialNumber(pair.first);
         }
     }
