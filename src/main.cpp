@@ -13,11 +13,14 @@
 #include "drivers/SensorManager/SensorManager.h"
 #include "config.json.h"
 #include "utils/SerialManager/SerialManager.h"
+#include <ArduinoWebsockets.h>
 
 SerialManager serialManager;
 SensorManager sensorManager;
 
 bool isWebSocketConnected = false;
+
+using namespace websockets;
 
 WebServer server(80);
 ModuleUtil moduleUtil(32);
@@ -31,6 +34,8 @@ const int EEPROM_PASS_ADDR = 64;
 const int EEPROM_MAX_LEN = 32;
 
 const int channelToGPIO[] = {32, 33, 34, 35};
+
+WebsocketsClient client;
 
 String getSSIDs()
 {
@@ -183,15 +188,12 @@ void loop()
     server.handleClient();
     moduleUtil.readModules();
 
-    if (WiFi.isConnected())
+    if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        if (WiFi.isConnected() && !isWebSocketConnected)
-        {
-            connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-        }
+        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     }
 
-    delay(2000);
+    client.poll();
 }
 
 std::mt19937 generator;

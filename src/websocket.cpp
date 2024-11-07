@@ -5,7 +5,7 @@
 
 using namespace websockets;
 
-WebsocketsClient wsClient;
+extern WebsocketsClient client;
 
 extern bool isWebSocketConnected;
 
@@ -59,40 +59,80 @@ void printJson(const JsonVariant &json, int indent = 0)
         Serial.println("null");
     }
 }
+
+void onEventsCallback(WebsocketsEvent event, String data)
+{
+    if (event == WebsocketsEvent::ConnectionOpened)
+    {
+        Serial.println("Connnection Opened");
+    }
+    else if (event == WebsocketsEvent::ConnectionClosed)
+    {
+        Serial.println("Connnection Closed");
+    }
+    else if (event == WebsocketsEvent::GotPing)
+    {
+        Serial.println("Got a Ping!");
+    }
+    else if (event == WebsocketsEvent::GotPong)
+    {
+        Serial.println("Got a Pong!");
+    }
+}
+
+#include <ArduinoJson.h>
+
+// Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
+StaticJsonDocument<1024> doc;
+
+void onMessageCallback(WebsocketsMessage message)
+{
+    Serial.print("Got Message: ");
+    Serial.println(message.data());
+
+    // Deserialize the JSON message
+    DeserializationError error = deserializeJson(doc, message.data());
+    if (error)
+    {
+        Serial.println("Failed to parse JSON");
+        return;
+    }
+
+    Serial.println("Parsed JSON message:");
+    printJson(doc);
+
+    // Now, access different parts of the JSON data
+    // bool ok = doc["Ok"];
+    // int status = doc["Status"];
+    // JsonObject data = doc["Data"];
+
+    // Check for specific commands in the JSON (e.g., readAllSensorData)
+    const char *command = doc["command"];
+    if (command != nullptr && strcmp(command, "readAllSensorData") == 0)
+    {
+        sendSensorData(); // Call the function to send sensor data
+    }
+    else
+    {
+        Serial.println("Unknown command received.");
+    }
+}
+
 void connectToWebSocket(const char *ws_server_address)
 {
-    if (wsClient.connect(ws_server_address))
+    if (client.connect(ws_server_address))
     {
         Serial.println("Connected to WebSocket server!");
         isWebSocketConnected = true;
 
-        // Set up event-driven message handler
-        wsClient.onMessage([](WebsocketsMessage message)
-                           { receiveWebSocketMessage(message.data(), message.isBinary()); });
-
-        // Event handler for WebSocket events (e.g., disconnection)
-        wsClient.onEvent([](WebsocketsEvent event, String data)
-                         {
-            if (event == WebsocketsEvent::ConnectionClosed)
-            {
-                Serial.println("WebSocket connection closed.");
-                isWebSocketConnected = false;
-            }
-            else if (event == WebsocketsEvent::GotPing)
-            {
-                Serial.println("WebSocket ping received.");
-            }
-            else if (event == WebsocketsEvent::GotPong)
-            {
-                Serial.println("WebSocket pong received.");
-            }
-        });
+        client.onMessage(onMessageCallback);
+        client.onEvent(onEventsCallback);
     }
     else
     {
-        Serial.println("Failed to connect to WebSocket server. Error code: " + String(wsClient.getCloseReason()));
+        Serial.println("Failed to connect to WebSocket server. Error code: " + String(client.getCloseReason()));
         isWebSocketConnected = false;
-        wsClient.close();
+        client.close();
     }
 }
 
@@ -106,38 +146,12 @@ void sendWebSocketMessage(const char *event, const JsonObject &data)
 
         String message;
         serializeJson(doc, message);
-        wsClient.send(message);
+        client.send(message);
         Serial.println("Sent: " + message);
     }
     else
     {
         Serial.println("WebSocket is not connected.");
-    }
-}
-
-void receiveWebSocketMessage(const String &message, bool isBinary)
-{
-    Serial.println("Received non-binary message: " + message);
-
-    StaticJsonDocument<256> doc;
-    DeserializationError error = deserializeJson(doc, message);
-    if (error)
-    {
-        Serial.println("Failed to parse JSON message.");
-        return;
-    }
-
-    Serial.println("Parsed JSON message:");
-    printJson(doc);
-
-    const char *command = doc["command"];
-    if (strcmp(command, "readAllSensorData") == 0)
-    {
-        sendSensorData();
-    }
-    else
-    {
-        Serial.println("Unknown command received.");
     }
 }
 
@@ -158,7 +172,7 @@ void sendSensorData()
         serializeJson(doc, jsonData);
 
         // Send the JSON string over WebSocket
-        wsClient.send(jsonData);
+        client.send(jsonData);
         Serial.println("Sent sensor data: " + jsonData);
     }
     else
@@ -183,7 +197,7 @@ void sendSensorAttachEvent(String serialNumber)
         serializeJson(doc, jsonData);
 
         // Send the JSON string over WebSocket
-        wsClient.send(jsonData);
+        client.send(jsonData);
         Serial.println("Sent: " + jsonData);
     }
 }
@@ -202,6 +216,6 @@ void sendSensorDetachEvent(String serialNumber)
     serializeJson(doc, jsonData);
 
     // Send the JSON string over WebSocket
-    wsClient.send(jsonData);
+    client.send(jsonData);
     Serial.println("Sent: " + jsonData);
 }
