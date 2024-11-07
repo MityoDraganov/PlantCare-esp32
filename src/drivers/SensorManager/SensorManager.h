@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "drivers/Sensor/Sensor.h"
 #include "drivers/SensorFactory.h"
+#include <ArduinoJson.h>
 
 class SensorManager {
 public:
@@ -12,7 +13,7 @@ public:
     static Sensor* getSensorByType(const char *type);
     static std::vector<Sensor *> &getAllSensors();
     static void initializeSensors();
-    static void readAllSensors();
+    static DynamicJsonDocument readAllSensors();
 
 private:
     std::vector<Sensor *> sensors;

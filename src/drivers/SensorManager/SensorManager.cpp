@@ -70,18 +70,45 @@ void SensorManager::initializeSensors()
 }
 
 
-void SensorManager::readAllSensors() {
+// void SensorManager::readAllSensors() {
+//     for (Sensor *sensor : getInstance().sensors) {
+//         if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
+//             int value = sensor->readValue(); // Read the sensor value
+//             Serial.print("Sensor Type: ");
+//             Serial.print(sensor->getType());
+//             Serial.print(" | Value: ");
+//             Serial.println(value);
+//         } else {
+//             Serial.print("Sensor Type: ");
+//             Serial.print(sensor->getType());
+//             Serial.println(" | GPIO not initialized.");
+//         }
+//     }
+// }
+
+DynamicJsonDocument SensorManager::readAllSensors() {
+    // Create a JSON document to store sensor data
+    DynamicJsonDocument sensorData(512);
+
     for (Sensor *sensor : getInstance().sensors) {
         if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
             int value = sensor->readValue(); // Read the sensor value
-            Serial.print("Sensor Type: ");
-            Serial.print(sensor->getType());
-            Serial.print(" | Value: ");
-            Serial.println(value);
+            String serialNumber = findKeyByValue(sensor->getType());
+            
+            // Add sensor data to JSON document
+            if (!serialNumber.isEmpty()) {
+                sensorData[serialNumber] = value;
+            } else {
+                Serial.print("Warning: Serial number for sensor ");
+                Serial.print(sensor->getType());
+                Serial.println(" not found.");
+            }
         } else {
             Serial.print("Sensor Type: ");
             Serial.print(sensor->getType());
             Serial.println(" | GPIO not initialized.");
         }
     }
+
+    return sensorData;
 }

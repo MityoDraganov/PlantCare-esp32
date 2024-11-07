@@ -9,14 +9,61 @@ WebsocketsClient wsClient;
 
 bool isWebSocketConnected = false;
 
-const unsigned long wsReconnectInterval = 5000;
+const unsigned long wsReconnectInterval = 2000;
+
+extern SensorManager sensorManager;
+void printJson(const JsonVariant &json, int indent = 0)
+{
+    // Create the indentation string manually
+    String indentStr;
+    for (int i = 0; i < indent; i++)
+    {
+        indentStr += "  "; // Adds two spaces per level
+    }
+
+    if (json.is<JsonObject>())
+    {
+        for (JsonPair kv : json.as<JsonObject>())
+        {
+            Serial.print(indentStr);
+            Serial.print(kv.key().c_str());
+            Serial.print(": ");
+            printJson(kv.value(), indent + 1); // Recursively print nested objects
+        }
+    }
+    else if (json.is<JsonArray>())
+    {
+        for (JsonVariant v : json.as<JsonArray>())
+        {
+            printJson(v, indent + 1);
+        }
+    }
+    else if (json.is<const char *>())
+    {
+        Serial.println(json.as<const char *>());
+    }
+    else if (json.is<int>())
+    {
+        Serial.println(json.as<int>());
+    }
+    else if (json.is<float>())
+    {
+        Serial.println(json.as<float>());
+    }
+    else if (json.is<bool>())
+    {
+        Serial.println(json.as<bool>() ? "true" : "false");
+    }
+    else
+    {
+        Serial.println("null");
+    }
+}
 
 void connectToWebSocket(const char *ws_server_address)
 {
-    if (!wsClient.available()) // Check if already connected
+    if (!wsClient.available())
     {
-        wsClient.close(); // Ensure any previous connection is closed
-
         if (wsClient.connect(ws_server_address))
         {
             Serial.println("Connected to WebSocket server!");
@@ -28,6 +75,7 @@ void connectToWebSocket(const char *ws_server_address)
         {
             Serial.println("Failed to connect to WebSocket server. Error code: " + String(wsClient.getCloseReason()));
             isWebSocketConnected = false;
+            wsClient.close();
         }
     }
 }
@@ -36,12 +84,12 @@ void pollWebSocket(const char *ws_server_address)
 {
     if (!wsClient.available())
     {
-        static unsigned long lastReconnectAttempt = 0;
-        if (millis() - lastReconnectAttempt > wsReconnectInterval)
-        {
-            lastReconnectAttempt = millis();
-            connectToWebSocket(ws_server_address);
-        }
+
+        connectToWebSocket(ws_server_address);
+    }
+    else
+    {
+        wsClient.poll();
     }
 }
 
@@ -76,6 +124,9 @@ void receiveWebSocketMessage(const String &message, bool isBinary)
         return;
     }
 
+    Serial.println("Parsed JSON message:");
+    printJson(doc);
+
     const char *command = doc["command"];
     if (strcmp(command, "readAllSensorData") == 0)
     {
@@ -89,19 +140,15 @@ void receiveWebSocketMessage(const String &message, bool isBinary)
 
 void sendSensorData()
 {
-    if (wsClient.available()) // Check if the WebSocket is connected before sending
-    {
-        // Create a JSON array to hold all sensor data
-        StaticJsonDocument<512> doc;
-        JsonArray sensorArray = doc.to<JsonArray>();
+    if (isWebSocketConnected)
+    { // Check if the WebSocket is connected before sending
+        // Retrieve sensor data as JSON
+        DynamicJsonDocument sensorData = sensorManager.readAllSensors();
 
-        // Iterate over all sensors and collect their data
-        for (Sensor *sensor : SensorManager::getAllSensors())
-        {
-            JsonObject sensorData = sensorArray.createNestedObject();
-            sensorData["sensor"] = sensor->getType();
-            sensorData["data"] = sensor->readValue();
-        }
+        // Prepare the WebSocket message with the sensor data
+        StaticJsonDocument<512> doc;
+        doc["Event"] = "SensorData";
+        doc["Data"] = sensorData.as<JsonObject>();
 
         // Serialize the JSON document to a string
         String jsonData;
@@ -119,27 +166,30 @@ void sendSensorData()
 
 void sendSensorAttachEvent(String serialNumber)
 {
-    StaticJsonDocument<512> doc;
-    doc["Event"] = "HandleAttachSensor";
-    
-    // Create a nested "Data" object inside the main JSON document
-    JsonObject data = doc.createNestedObject("Data");
-    data["SerialNumber"] = serialNumber;
+    if (isWebSocketConnected) // Check if the WebSocket is connected before sending
+    {
+        StaticJsonDocument<512> doc;
+        doc["Event"] = "HandleAttachSensor";
 
-    // Serialize the JSON document to a string
-    String jsonData;
-    serializeJson(doc, jsonData);
+        // Create a nested "Data" object inside the main JSON document
+        JsonObject data = doc.createNestedObject("Data");
+        data["SerialNumber"] = serialNumber;
 
-    // Send the JSON string over WebSocket
-    wsClient.send(jsonData);
-    Serial.println("Sent: " + jsonData);
+        // Serialize the JSON document to a string
+        String jsonData;
+        serializeJson(doc, jsonData);
+
+        // Send the JSON string over WebSocket
+        wsClient.send(jsonData);
+        Serial.println("Sent: " + jsonData);
+    }
 }
 
 void sendSensorDetachEvent(String serialNumber)
 {
     StaticJsonDocument<512> doc;
     doc["Event"] = "HandleDetachSensor";
-    
+
     // Create a nested "Data" object inside the main JSON document
     JsonObject data = doc.createNestedObject("Data");
     data["SerialNumber"] = serialNumber;
