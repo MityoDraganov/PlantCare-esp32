@@ -183,7 +183,7 @@ void setup()
     server.begin();
 
     setupOTA();
-    //keepAliveTicker.attach(30, sendKeepAlive);
+    keepAliveTicker.attach(30, sendKeepAlive);
 }
 
 void loop()
