@@ -184,13 +184,14 @@ void setup()
 
     setupOTA();
     keepAliveTicker.attach(30, sendKeepAlive);
-    keepAliveTicker.attach(1, moduleUtil.readModules);
+    keepAliveTicker.attach(1, []() { moduleUtil.readModules(); });
 }
 
 void loop()
 {
     ArduinoOTA.handle();
     server.handleClient();
+    moduleUtil.readModules();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
