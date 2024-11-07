@@ -184,7 +184,6 @@ void setup()
 
     setupOTA();
     keepAliveTicker.attach(30, sendKeepAlive);
-    keepAliveTicker.attach(1, []() { moduleUtil.readModules(); });
 }
 
 void loop()
