@@ -101,14 +101,10 @@ void onMessageCallback(WebsocketsMessage message)
     Serial.println("Parsed JSON message:");
     printJson(doc);
 
-    // Now, access different parts of the JSON data
-    // bool ok = doc["Ok"];
-    // int status = doc["Status"];
-    // JsonObject data = doc["Data"];
-
     // Check for specific commands in the JSON (e.g., readAllSensorData)
-    const char *command = doc["command"];
-    if (command != nullptr && strcmp(command, "HandleSensorDataRequest") == 0)
+    const char *event = doc["event"];
+    const char *command = doc["data"]["command"];
+    if (event != nullptr && strcmp(event, "HandleSensorDataRequest") == 0 || command != nullptr && strcmp(command, "readAllSensorData") == 0)
     {
         sendSensorData(); // Call the function to send sensor data
     }
