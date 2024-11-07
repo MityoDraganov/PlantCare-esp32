@@ -7,7 +7,7 @@ using namespace websockets;
 
 WebsocketsClient wsClient;
 
-bool isWebSocketConnected = false;
+extern bool isWebSocketConnected;
 
 const unsigned long wsReconnectInterval = 2000;
 
@@ -59,37 +59,40 @@ void printJson(const JsonVariant &json, int indent = 0)
         Serial.println("null");
     }
 }
-
 void connectToWebSocket(const char *ws_server_address)
 {
-    if (!wsClient.available())
+    if (wsClient.connect(ws_server_address))
     {
-        if (wsClient.connect(ws_server_address))
-        {
-            Serial.println("Connected to WebSocket server!");
-            isWebSocketConnected = true;
-            wsClient.onMessage([](WebsocketsMessage message)
-                               { receiveWebSocketMessage(message.data(), message.isBinary()); });
-        }
-        else
-        {
-            Serial.println("Failed to connect to WebSocket server. Error code: " + String(wsClient.getCloseReason()));
-            isWebSocketConnected = false;
-            wsClient.close();
-        }
-    }
-}
+        Serial.println("Connected to WebSocket server!");
+        isWebSocketConnected = true;
 
-void pollWebSocket(const char *ws_server_address)
-{
-    if (!wsClient.available())
-    {
+        // Set up event-driven message handler
+        wsClient.onMessage([](WebsocketsMessage message)
+                           { receiveWebSocketMessage(message.data(), message.isBinary()); });
 
-        connectToWebSocket(ws_server_address);
+        // Event handler for WebSocket events (e.g., disconnection)
+        wsClient.onEvent([](WebsocketsEvent event, String data)
+                         {
+            if (event == WebsocketsEvent::ConnectionClosed)
+            {
+                Serial.println("WebSocket connection closed.");
+                isWebSocketConnected = false;
+            }
+            else if (event == WebsocketsEvent::GotPing)
+            {
+                Serial.println("WebSocket ping received.");
+            }
+            else if (event == WebsocketsEvent::GotPong)
+            {
+                Serial.println("WebSocket pong received.");
+            }
+        });
     }
     else
     {
-        wsClient.poll();
+        Serial.println("Failed to connect to WebSocket server. Error code: " + String(wsClient.getCloseReason()));
+        isWebSocketConnected = false;
+        wsClient.close();
     }
 }
 

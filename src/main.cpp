@@ -17,6 +17,8 @@
 SerialManager serialManager;
 SensorManager sensorManager;
 
+bool isWebSocketConnected = false;
+
 WebServer server(80);
 ModuleUtil moduleUtil(32);
 String generateSerialNumber(int length);
@@ -183,7 +185,10 @@ void loop()
 
     if (WiFi.isConnected())
     {
-        pollWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
+        if (WiFi.isConnected() && !isWebSocketConnected)
+        {
+            connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
+        }
     }
 
     delay(2000);
