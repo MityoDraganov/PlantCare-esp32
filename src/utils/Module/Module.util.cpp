@@ -5,7 +5,7 @@
 
 #include "websocket.h"
 
-extern EEPROMUtil eepromUtil;
+EEPROMUtil eepromUtil(0x50); // Initialize external EEPROM with address 0x50
 extern SerialManager serialManager; 
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
