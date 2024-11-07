@@ -14,6 +14,7 @@
 #include "config.json.h"
 #include "utils/SerialManager/SerialManager.h"
 #include <ArduinoWebsockets.h>
+#include <Ticker.h>
 
 SerialManager serialManager;
 SensorManager sensorManager;
@@ -36,6 +37,8 @@ const int EEPROM_MAX_LEN = 32;
 const int channelToGPIO[] = {32, 33, 34, 35};
 
 WebsocketsClient client;
+
+Ticker keepAliveTicker;
 
 String getSSIDs()
 {
@@ -180,13 +183,14 @@ void setup()
     server.begin();
 
     setupOTA();
+    keepAliveTicker.attach(30, sendKeepAlive);
+    keepAliveTicker.attach(1, moduleUtil.readModules);
 }
 
 void loop()
 {
     ArduinoOTA.handle();
     server.handleClient();
-    moduleUtil.readModules();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
