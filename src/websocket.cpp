@@ -108,7 +108,7 @@ void onMessageCallback(WebsocketsMessage message)
 
     // Check for specific commands in the JSON (e.g., readAllSensorData)
     const char *command = doc["command"];
-    if (command != nullptr && strcmp(command, "readAllSensorData") == 0)
+    if (command != nullptr && strcmp(command, "HandleSensorDataRequest") == 0)
     {
         sendSensorData(); // Call the function to send sensor data
     }
