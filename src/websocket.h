@@ -9,6 +9,6 @@ void sendWebSocketMessage(const char* event, const JsonObject& data);
 void sendSensorAttachEvent(String serialNumber);
 void sendSensorDetachEvent(String serialNumber);
 void receiveWebSocketMessage(const String &message, bool isBinary);
-void sendSensorData(); // New function declaration
-
-#endif // WEBSOCKET_H
+void sendSensorData();
+void sendKeepAlive();
+#endif

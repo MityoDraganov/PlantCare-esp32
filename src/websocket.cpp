@@ -1,5 +1,6 @@
-#include <ArduinoWebsockets.h>
+
 #include <ArduinoJson.h>
+#include <ArduinoWebsockets.h>
 #include "websocket.h"
 #include "drivers/SensorManager/SensorManager.h"
 
@@ -72,6 +73,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
     }
     else if (event == WebsocketsEvent::GotPing)
     {
+        client.pong();
         Serial.println("Got a Ping!");
     }
     else if (event == WebsocketsEvent::GotPong)
@@ -79,8 +81,6 @@ void onEventsCallback(WebsocketsEvent event, String data)
         Serial.println("Got a Pong!");
     }
 }
-
-#include <ArduinoJson.h>
 
 // Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
 StaticJsonDocument<1024> doc;
@@ -214,4 +214,12 @@ void sendSensorDetachEvent(String serialNumber)
     // Send the JSON string over WebSocket
     client.send(jsonData);
     Serial.println("Sent: " + jsonData);
+}
+
+
+void sendKeepAlive() {
+    if (isWebSocketConnected) {
+        client.ping();
+        Serial.println("Sent keep-alive ping");
+    }
 }
