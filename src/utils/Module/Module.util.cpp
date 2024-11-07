@@ -5,7 +5,7 @@
 
 #include "websocket.h"
 
-EEPROMUtil eepromUtil(0x50);
+extern EEPROMUtil eepromUtil;
 extern SerialManager serialManager; 
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
@@ -36,6 +36,7 @@ void ModuleUtil::readModules()
 
             if (!serialManager.isSerialKnown(serialNumber))
             {
+                Serial.print("Adding serial: " + serialNumber);
                 serialManager.updateSerialNumber(serialNumber, i);
                 sendSensorAttachEvent(serialNumber);
             }
