@@ -160,17 +160,7 @@ void sendSensorData()
         // Prepare the WebSocket message with the sensor data
         StaticJsonDocument<512> doc;
         doc["Event"] = "HandleMeasurements";
-
-        // Create a nested "Data" array inside the main JSON document
-        JsonArray dataArray = doc.createNestedArray("Data");
-
-        // Iterate over the sensor data and add each sensor's data to the array
-        for (JsonPair kv : sensorData.as<JsonObject>())
-        {
-            JsonObject sensorObject = dataArray.createNestedObject();
-            sensorObject["sensorSerialNumber"] = kv.key().c_str();
-            sensorObject["value"] = kv.value().as<float>();
-        }
+        doc["Data"] = sensorData;
 
         // Serialize the JSON document to a string
         String jsonData;
