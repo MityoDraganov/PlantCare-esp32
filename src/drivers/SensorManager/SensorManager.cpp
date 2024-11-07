@@ -89,15 +89,18 @@ void SensorManager::initializeSensors()
 DynamicJsonDocument SensorManager::readAllSensors() {
     // Create a JSON document to store sensor data
     DynamicJsonDocument sensorData(512);
+    JsonArray sensorArray = sensorData.to<JsonArray>();
 
     for (Sensor *sensor : getInstance().sensors) {
         if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
             int value = sensor->readValue(); // Read the sensor value
             String serialNumber = findKeyByValue(sensor->getType());
             
-            // Add sensor data to JSON document
+            // Add sensor data to JSON array
             if (!serialNumber.isEmpty()) {
-                sensorData[serialNumber] = value;
+                JsonObject sensorObject = sensorArray.createNestedObject();
+                sensorObject["sensorSerialNumber"] = serialNumber;
+                sensorObject["value"] = value;
             } else {
                 Serial.print("Warning: Serial number for sensor ");
                 Serial.print(sensor->getType());
