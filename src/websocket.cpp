@@ -179,7 +179,7 @@ void sendSensorData()
         // Retrieve sensor data as JSON
         DynamicJsonDocument sensorData = sensorManager.readAllSensors();
         Serial.println("sensorData");
-        Serial.println(sensorData);
+        printJson(sensorData);
         // Prepare the WebSocket message with the sensor data
         StaticJsonDocument<512> doc;
         doc["Event"] = "HandleMeasurements";
