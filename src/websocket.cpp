@@ -82,7 +82,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
 }
 
 // Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
-StaticJsonDocument<1024> doc;
+StaticJsonDocument<2048> doc;
 
 void onMessageCallback(WebsocketsMessage message)
 {
