@@ -84,33 +84,49 @@ void onEventsCallback(WebsocketsEvent event, String data)
 // Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
 StaticJsonDocument<2048> doc;
 
-void onMessageCallback(WebsocketsMessage message)
-{
+void onMessageCallback(WebsocketsMessage message) {
     Serial.print("Got Message: ");
     Serial.println(message.data());
 
-    // Deserialize the JSON message
+    // Increase buffer size for larger messages
+    StaticJsonDocument<2048> doc;
     DeserializationError error = deserializeJson(doc, message.data());
-    if (error)
-    {
-        Serial.println("Failed to parse JSON");
+    
+    if (error) {
+        Serial.print("Failed to parse JSON: ");
+        Serial.println(error.c_str());
         return;
     }
 
-    Serial.println("Parsed JSON message:");
-    printJson(doc);
+    // Extract message type/event
+    const char* event = doc["Event"] | "unknown";
+    
+    // Handle different event types
+    if (strcmp(event, "Connected") == 0) {
+        isWebSocketConnected = true;
+        Serial.println("Connection confirmed by server");
+    }
+    else if (strcmp(event, "KeepAlive") == 0) {
+        // Respond to keep-alive
+        DynamicJsonDocument response(128);
+        response["Event"] = "KeepAliveResponse";
+        String jsonResponse;
+        serializeJson(response, jsonResponse);
+        client.send(jsonResponse);
+    }
+    else if (strcmp(event, "ReadSensors") == 0) {
+        // Handle sensor read request
+        sendSensorData();
+    }
+    else {
+        // Log unknown event type
+        Serial.print("Unknown event type: ");
+        Serial.println(event);
+    }
 
-    // Check for specific commands in the JSON (e.g., readAllSensorData)
-    const char *event = doc["event"];
-    const char *command = doc["data"]["command"];
-    if (event != nullptr && strcmp(event, "HandleSensorDataRequest") == 0 || command != nullptr && strcmp(command, "readAllSensorData") == 0)
-    {
-        sendSensorData(); // Call the function to send sensor data
-    }
-    else
-    {
-        Serial.println("Unknown command received.");
-    }
+    // Print parsed message for debugging
+    Serial.println("Parsed JSON message:");
+    serializeJsonPretty(doc, Serial);
 }
 
 void connectToWebSocket(const char *ws_server_address)

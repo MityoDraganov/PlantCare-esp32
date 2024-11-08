@@ -188,6 +188,7 @@ void setup()
 
 void loop()
 {
+    client.ping();
     ArduinoOTA.handle();
     server.handleClient();
     moduleUtil.readModules();
