@@ -149,8 +149,8 @@ void setup()
         Serial.println("SPIFFS Mount Failed");
         return;
     }
+    client.close();
     Serial.begin(115200);
-    // Wait for Serial Monitor to open
     while (!Serial)
     {
         ; // Wait for serial port to connect. Needed for native USB

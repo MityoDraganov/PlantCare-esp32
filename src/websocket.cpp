@@ -84,29 +84,33 @@ void onEventsCallback(WebsocketsEvent event, String data)
 // Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
 StaticJsonDocument<2048> doc;
 
-void onMessageCallback(WebsocketsMessage message) {
+void onMessageCallback(WebsocketsMessage message)
+{
     Serial.print("Got Message: ");
     Serial.println(message.data());
 
     // Increase buffer size for larger messages
     StaticJsonDocument<2048> doc;
     DeserializationError error = deserializeJson(doc, message.data());
-    
-    if (error) {
+
+    if (error)
+    {
         Serial.print("Failed to parse JSON: ");
         Serial.println(error.c_str());
         return;
     }
 
     // Extract message type/event
-    const char* event = doc["Event"] | "unknown";
-    
+    const char *event = doc["Event"] | "unknown";
+
     // Handle different event types
-    if (strcmp(event, "Connected") == 0) {
+    if (strcmp(event, "Connected") == 0)
+    {
         isWebSocketConnected = true;
         Serial.println("Connection confirmed by server");
     }
-    else if (strcmp(event, "KeepAlive") == 0) {
+    else if (strcmp(event, "KeepAlive") == 0)
+    {
         // Respond to keep-alive
         DynamicJsonDocument response(128);
         response["Event"] = "KeepAliveResponse";
@@ -114,11 +118,13 @@ void onMessageCallback(WebsocketsMessage message) {
         serializeJson(response, jsonResponse);
         client.send(jsonResponse);
     }
-    else if (strcmp(event, "ReadSensors") == 0) {
+    else if (strcmp(event, "ReadSensors") == 0)
+    {
         // Handle sensor read request
         sendSensorData();
     }
-    else {
+    else
+    {
         // Log unknown event type
         Serial.print("Unknown event type: ");
         Serial.println(event);
@@ -169,10 +175,11 @@ void sendWebSocketMessage(const char *event, const JsonObject &data)
 void sendSensorData()
 {
     if (isWebSocketConnected)
-    { 
+    {
         // Retrieve sensor data as JSON
         DynamicJsonDocument sensorData = sensorManager.readAllSensors();
-
+        fmt.println("sensorData");
+        fmt.println(sensorData);
         // Prepare the WebSocket message with the sensor data
         StaticJsonDocument<512> doc;
         doc["Event"] = "HandleMeasurements";
@@ -231,9 +238,10 @@ void sendSensorDetachEvent(String serialNumber)
     Serial.println("Sent: " + jsonData);
 }
 
-
-void sendKeepAlive() {
-    if (isWebSocketConnected) {
+void sendKeepAlive()
+{
+    if (isWebSocketConnected)
+    {
         client.ping();
         Serial.println("Sent keep-alive ping");
     }
