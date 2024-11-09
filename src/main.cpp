@@ -147,6 +147,8 @@ void setup()
     }
     client.close();
     Serial.begin(115200);
+    connectToWiFi("Welikowi", "password here");
+    connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     while (!Serial)
     {
         ; // Wait for serial port to connect. Needed for native USB
