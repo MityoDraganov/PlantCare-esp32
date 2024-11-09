@@ -8,7 +8,6 @@ const int channelToGPIO[] = {32, 33, 34, 35};
 extern std::map<String, String> sensorConfig;
 
 extern DynamicJsonDocument jsonDoc;
-extern SerialManager serialManager; 
 
 const char *findKeyByValue(const String &searchValue)
 {
@@ -48,6 +47,7 @@ std::vector<Sensor *> &SensorManager::getAllSensors()
 
 void SensorManager::initializeSensors()
 {
+    SerialManager &serialManager = SerialManager::getInstance();
     auto serials = serialManager.getAllSerials();
     serialManager.printAllSerials();
 
@@ -69,7 +69,6 @@ void SensorManager::initializeSensors()
     }
 }
 
-
 // void SensorManager::readAllSensors() {
 //     for (Sensor *sensor : getInstance().sensors) {
 //         if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
@@ -86,27 +85,35 @@ void SensorManager::initializeSensors()
 //     }
 // }
 
-DynamicJsonDocument SensorManager::readAllSensors() {
+DynamicJsonDocument SensorManager::readAllSensors()
+{
     // Create a JSON document to store sensor data
     DynamicJsonDocument sensorData(512);
     JsonArray sensorArray = sensorData.to<JsonArray>();
 
-    for (Sensor *sensor : getInstance().sensors) {
-        if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
+    for (Sensor *sensor : getInstance().sensors)
+    {
+        if (sensor->getGpio() != -1)
+        {                                    // Check if the GPIO is initialized
             int value = sensor->readValue(); // Read the sensor value
             String serialNumber = findKeyByValue(sensor->getType());
-            
+
             // Add sensor data to JSON array
-            if (!serialNumber.isEmpty()) {
+            if (!serialNumber.isEmpty())
+            {
                 JsonObject sensorObject = sensorArray.createNestedObject();
                 sensorObject["sensorSerialNumber"] = serialNumber;
                 sensorObject["value"] = value;
-            } else {
+            }
+            else
+            {
                 Serial.print("Warning: Serial number for sensor ");
                 Serial.print(sensor->getType());
                 Serial.println(" not found.");
             }
-        } else {
+        }
+        else
+        {
             Serial.print("Sensor Type: ");
             Serial.print(sensor->getType());
             Serial.println(" | GPIO not initialized.");

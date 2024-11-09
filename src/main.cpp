@@ -5,20 +5,16 @@
 #include <ArduinoJson.h>
 #include "utils/Multiplexer/Multiplexer.h"
 #include <ArduinoOTA.h>
-#include "drivers/SensorManager/SensorManager.h"
 #include "utils/EEPROM/EEPROM.util.h"
 #include <random>
 #include "utils/Module/Module.util.h"
 #include <Wire.h>
 #include "drivers/SensorManager/SensorManager.h"
 #include "config.json.h"
-#include "utils/SerialManager/SerialManager.h"
 #include <ArduinoWebsockets.h>
 #include <Ticker.h>
 
-SerialManager serialManager;
-SensorManager sensorManager;
-
+EEPROMUtil eepromUtil(0x50);
 bool isWebSocketConnected = false;
 
 using namespace websockets;
@@ -162,7 +158,6 @@ void setup()
         return;
     }
 
-    EEPROMUtil eepromUtil(0x50);
     eepromUtil.begin();
     Wire.begin();
     WiFi.mode(WIFI_STA);
@@ -174,7 +169,8 @@ void setup()
 
     moduleUtil.readModules();
 
-    sensorManager.initializeSensors();
+
+    SensorManager::initializeSensors();
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/save", HTTP_POST, handleSave);

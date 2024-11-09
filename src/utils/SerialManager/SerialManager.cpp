@@ -1,6 +1,5 @@
 #include "SerialManager.h"
 
-SerialManager::SerialManager() {}
 const int channelToGPIO[] = {32, 33, 34, 35};
 
 void SerialManager::updateSerialNumber(const String &serialNumber, uint8_t channel)

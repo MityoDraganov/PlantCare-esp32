@@ -5,25 +5,27 @@
 
 #include "websocket.h"
 
-EEPROMUtil eepromUtil(0x50); // Initialize external EEPROM with address 0x50
-extern SerialManager serialManager; 
+extern EEPROMUtil eepromUtil;
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
 
-bool isValidSerialNumber(const String &serialNumber) {
-    for (char c : serialNumber) {
+bool isValidSerialNumber(const String &serialNumber)
+{
+    for (char c : serialNumber)
+    {
         // Check if character is not alphanumeric
-        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))) {
+        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
+        {
             return false; // Invalid character found
         }
     }
     return true; // All characters are valid
 }
 
-
 void ModuleUtil::readModules()
 {
     std::set<String> knownSerials; // Correctly declare knownSerials
+    SerialManager &serialManager = SerialManager::getInstance();
 
     for (int i = 0; i < NUM_MUX_CHANNELS; i++)
     {
