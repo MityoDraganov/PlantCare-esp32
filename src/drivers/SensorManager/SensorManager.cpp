@@ -66,6 +66,8 @@ void SensorManager::initializeSensors()
         Serial.println(gpioPin);
 
         sensor->init(gpioPin);
+
+        registerSensor(sensor);
     }
 }
 
