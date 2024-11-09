@@ -42,6 +42,10 @@ void ModuleUtil::readModules()
                 serialManager.updateSerialNumber(serialNumber, i);
                 sendSensorAttachEvent(serialNumber);
             }
+        } else {
+            if(serialNumber != "") {
+            Serial.print("Invalid serial number: " + serialNumber);
+            }
         }
     }
 
