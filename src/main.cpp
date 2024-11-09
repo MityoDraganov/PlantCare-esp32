@@ -168,8 +168,6 @@ void setup()
     Serial.println(WiFi.softAPIP());
 
     moduleUtil.readModules();
-
-
     SensorManager::initializeSensors();
 
     server.on("/", HTTP_GET, handleRoot);
@@ -191,7 +189,7 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        connectToWebSocket("ws://192.168.0.144:8080/v1/pots/?token=pot_1");
+        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     }
 
     client.poll();

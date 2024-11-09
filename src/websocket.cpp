@@ -101,7 +101,7 @@ void onMessageCallback(WebsocketsMessage message)
     }
 
     // Extract message type/event
-    const char *event = doc["Event"] | "unknown";
+    const char *event = doc["event"] | "unknown";
 
     // Handle different event types
     if (strcmp(event, "Connected") == 0)
@@ -118,14 +118,12 @@ void onMessageCallback(WebsocketsMessage message)
         serializeJson(response, jsonResponse);
         client.send(jsonResponse);
     }
-    else if (strcmp(event, "ReadSensors") == 0)
+    else if (strcmp(event, "HandleSensorDataRequest") == 0)
     {
-        // Handle sensor read request
         sendSensorData();
     }
     else
     {
-        // Log unknown event type
         Serial.print("Unknown event type: ");
         Serial.println(event);
     }
@@ -243,6 +241,6 @@ void sendKeepAlive()
     if (isWebSocketConnected)
     {
         client.ping();
-        Serial.println("Sent keep-alive ping");
+        //Serial.println("Sent keep-alive ping");
     }
 }
