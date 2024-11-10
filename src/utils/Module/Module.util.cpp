@@ -40,6 +40,7 @@ void ModuleUtil::readModules()
             {
                 Serial.print("Adding serial: " + serialNumber);
                 serialManager.updateSerialNumber(serialNumber, i);
+                addPendingSerial(serialNumber);
                 sendSensorAttachEvent(serialNumber);
             }
         }

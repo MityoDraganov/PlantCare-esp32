@@ -3,8 +3,9 @@
 #include "utils/EEPROM/EEPROM.util.h"
 #include "utils/SerialManager/SerialManager.h"
 #include <ArduinoJson.h>
+#include "Globals.h"
 
-const int channelToGPIO[] = {32, 33, 34, 35};
+extern int channelToGPIO[];
 extern std::map<String, String> sensorConfig;
 
 extern DynamicJsonDocument jsonDoc;
@@ -70,22 +71,6 @@ void SensorManager::initializeSensors()
         registerSensor(sensor);
     }
 }
-
-// void SensorManager::readAllSensors() {
-//     for (Sensor *sensor : getInstance().sensors) {
-//         if (sensor->getGpio() != -1) { // Check if the GPIO is initialized
-//             int value = sensor->readValue(); // Read the sensor value
-//             Serial.print("Sensor Type: ");
-//             Serial.print(sensor->getType());
-//             Serial.print(" | Value: ");
-//             Serial.println(value);
-//         } else {
-//             Serial.print("Sensor Type: ");
-//             Serial.print(sensor->getType());
-//             Serial.println(" | GPIO not initialized.");
-//         }
-//     }
-// }
 
 DynamicJsonDocument SensorManager::readAllSensors()
 {

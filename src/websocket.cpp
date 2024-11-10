@@ -2,6 +2,7 @@
 #include <ArduinoWebsockets.h>
 #include "websocket.h"
 #include "drivers/SensorManager/SensorManager.h"
+#include <queue>
 
 using namespace websockets;
 
@@ -10,6 +11,9 @@ extern WebsocketsClient client;
 extern bool isWebSocketConnected;
 
 const unsigned long wsReconnectInterval = 2000;
+
+std::queue<String> pendingSerials;
+
 
 extern SensorManager sensorManager;
 void printJson(const JsonVariant &json, int indent = 0)
@@ -81,6 +85,21 @@ void onEventsCallback(WebsocketsEvent event, String data)
     }
 }
 
+
+
+void addPendingSerial(const String &serialNumber)
+{
+    pendingSerials.push(serialNumber);
+}
+
+void sendPendingSerials()
+{
+    while (!pendingSerials.empty())
+    {
+        sendSensorAttachEvent(pendingSerials.front());
+        pendingSerials.pop();
+    }
+}
 // Update this size based on your JSON structure (you might need to increase it further if the data is more complex)
 StaticJsonDocument<2048> doc;
 

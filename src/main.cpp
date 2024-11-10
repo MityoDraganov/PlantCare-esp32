@@ -13,6 +13,7 @@
 #include "config.json.h"
 #include <ArduinoWebsockets.h>
 #include <Ticker.h>
+#include "Globals.h"
 
 EEPROMUtil eepromUtil(0x50);
 bool isWebSocketConnected = false;
@@ -30,7 +31,7 @@ const int EEPROM_SSID_ADDR = 0;
 const int EEPROM_PASS_ADDR = 64;
 const int EEPROM_MAX_LEN = 32;
 
-const int channelToGPIO[] = {32, 33, 34, 35};
+int channelToGPIO[] = {32, 33, 34, 35};
 
 WebsocketsClient client;
 
@@ -57,31 +58,20 @@ String getSSIDs()
 
 DynamicJsonDocument jsonDoc(1024);
 
-// HTML content to be served
-const char *index_html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head><title>ESP32 Wi-Fi Config</title></head>
-<body>
-<h1>ESP32 Wi-Fi Configuration</h1>
-<form action="/save" method="POST">
-    <label for="ssid">Wi-Fi SSID:</label>
-    <select id="ssid" name="ssid">
-        <!--SSIDS_PLACEHOLDER-->
-    </select><br><br>
-    <label for="password">Wi-Fi Password:</label>
-    <input type="password" id="password" name="password" required><br><br>
-    <input type="submit" value="Save">
-</form>
-</body>
-</html>
-)rawliteral";
+const char* html_path = "/index.html";
 
 void handleRoot()
 {
-    String html = index_html;
-    html.replace("<!--SSIDS_PLACEHOLDER-->", getSSIDs());
-    server.send(200, "text/html", html);
+    if (SPIFFS.exists(html_path))
+    {
+        File file = SPIFFS.open(html_path, "r");
+        server.streamFile(file, "text/html");
+        file.close();
+    }
+    else
+    {
+        server.send(500, "text/plain", "Internal Server Error");
+    }
 }
 
 void connectToWiFi(const String &ssid, const String &password)
@@ -141,14 +131,14 @@ void setupOTA()
 void setup()
 {
     if (!SPIFFS.begin(true))
-    { // Pass true to format if failed to mount
+    { 
         Serial.println("SPIFFS Mount Failed");
         return;
     }
     client.close();
     Serial.begin(115200);
-    connectToWiFi("Welikowi", "password here");
-    connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
+    // connectToWiFi("Welikowi", "password here");
+    // connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     while (!Serial)
     {
         ; // Wait for serial port to connect. Needed for native USB
@@ -184,15 +174,21 @@ void setup()
 
 void loop()
 {
-    client.ping();
     ArduinoOTA.handle();
     server.handleClient();
-    moduleUtil.readModules();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
+    Serial.println("Waiting for ws connection");
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     }
+    if (!isWebSocketConnected)
+    {
+        return;
+    }
+    moduleUtil.readModules();
+    sendPendingSerials();
+    client.ping();
 
     client.poll();
 }

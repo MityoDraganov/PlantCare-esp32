@@ -1,6 +1,7 @@
 #include "SerialManager.h"
+#include "Globals.h"
 
-const int channelToGPIO[] = {32, 33, 34, 35};
+extern int channelToGPIO[];
 
 void SerialManager::updateSerialNumber(const String &serialNumber, uint8_t channel)
 {
