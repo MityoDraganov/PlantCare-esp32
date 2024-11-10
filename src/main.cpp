@@ -23,7 +23,6 @@ using namespace websockets;
 WebServer server(80);
 ModuleUtil moduleUtil(32);
 String generateSerialNumber(int length);
-bool webSocketConnected = false;
 unsigned long lastReconnectAttempt = 0;
 const unsigned long reconnectInterval = 5000;
 
@@ -130,12 +129,14 @@ void setupOTA()
 
 void setup()
 {
+    isWebSocketConnected = false;
+    client.close();
     if (!SPIFFS.begin(true))
     { 
         Serial.println("SPIFFS Mount Failed");
         return;
     }
-    client.close();
+    
     Serial.begin(115200);
     // connectToWiFi("Welikowi", "password here");
     // connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
