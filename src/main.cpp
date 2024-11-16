@@ -182,7 +182,6 @@ void setup()
 
 void loop()
 {
-    client.ping();
     ArduinoOTA.handle();
     server.handleClient();
     moduleUtil.readModules();
@@ -190,9 +189,10 @@ void loop()
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-    }
+    } else if(WiFi.isConnected()){
     client.ping();
     client.poll();
+    }
 }
 
 std::mt19937 generator;
