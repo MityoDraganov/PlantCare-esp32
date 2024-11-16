@@ -171,13 +171,21 @@ void setup()
     SensorManager::initializeSensors();
 
     server.on("/", HTTP_GET, handleRoot);
+    server.on("/favicon.ico", HTTP_GET, []()
+              {
+                  server.send(200, "image/x-icon", ""); // Sends an empty favicon
+              });
     server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound(handleRoot);
+    server.onNotFound([]()
+                      {
+                          Serial.print("Unhandled request for path: ");
+                          Serial.println(server.uri());
+                          handleRoot(); // Redirect to root or handle appropriately
+                      });
 
     server.begin();
 
     setupOTA();
-    keepAliveTicker.attach(5, sendKeepAlive);
 }
 
 void loop()
@@ -189,9 +197,12 @@ void loop()
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-    } else if(WiFi.isConnected()){
-    client.ping();
-    client.poll();
+    }
+    else if (WiFi.isConnected())
+    {
+        client.ping();
+        delay(1000);
+        client.poll();
     }
 }
 

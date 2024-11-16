@@ -142,6 +142,7 @@ void connectToWebSocket(const char *ws_server_address)
 
         client.onMessage(onMessageCallback);
         client.onEvent(onEventsCallback);
+        delay(250);
     }
     else
     {
