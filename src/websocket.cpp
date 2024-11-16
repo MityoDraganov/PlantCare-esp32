@@ -77,7 +77,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
     }
     else if (event == WebsocketsEvent::GotPong)
     {
-        //Serial.println("Got a Pong!");
+        Serial.println("Got a Pong!");
     }
 }
 

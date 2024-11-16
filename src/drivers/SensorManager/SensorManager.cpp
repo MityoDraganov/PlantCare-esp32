@@ -67,6 +67,8 @@ void SensorManager::initializeSensors()
 
         sensor->init(gpioPin);
 
+        Serial.println("Sensor value: " + String(sensor->readValue()));
+
         registerSensor(sensor);
     }
 }

@@ -191,7 +191,7 @@ void loop()
     {
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
     }
-
+    client.ping();
     client.poll();
 }
 
