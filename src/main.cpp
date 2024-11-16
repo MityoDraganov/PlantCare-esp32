@@ -63,9 +63,9 @@ void handleRoot()
 {
     if (SPIFFS.exists(html_path))
     {
-        File file = SPIFFS.open(html_path, "r");
-        server.streamFile(file, "text/html");
-        file.close();
+        String html = SPIFFS.open("/index.html", "r").readString();
+        html.replace("<!--SSIDS_PLACEHOLDER-->", getSSIDs());
+        server.send(200, "text/html", html);
     }
     else
     {
@@ -177,6 +177,7 @@ void loop()
 {
     ArduinoOTA.handle();
     server.handleClient();
+    client.ping();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
@@ -189,7 +190,6 @@ void loop()
     }
     moduleUtil.readModules();
     sendPendingSerials();
-    client.ping();
 
     client.poll();
 }

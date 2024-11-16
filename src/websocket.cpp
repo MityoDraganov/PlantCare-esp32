@@ -72,7 +72,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
     }
     else if (event == WebsocketsEvent::ConnectionClosed)
     {
-        Serial.println("Connnection Closed");
+        Serial.println("Connnection Closed: " + data);
     }
     else if (event == WebsocketsEvent::GotPing)
     {
