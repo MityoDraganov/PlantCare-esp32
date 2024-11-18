@@ -9,6 +9,8 @@ extern EEPROMUtil eepromUtil;
 
 ModuleUtil::ModuleUtil(int firstAnalogSensorPin) : _firstAnalogSensorPin(firstAnalogSensorPin) {}
 
+extern bool isWebSocketConnected;
+
 bool isValidSerialNumber(const String &serialNumber)
 {
     for (char c : serialNumber)
@@ -16,7 +18,7 @@ bool isValidSerialNumber(const String &serialNumber)
         // Check if character is not alphanumeric
         if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
         {
-            return false; // Invalid character found
+            return false;
         }
     }
     return true; // All characters are valid
@@ -24,7 +26,7 @@ bool isValidSerialNumber(const String &serialNumber)
 
 void ModuleUtil::readModules()
 {
-    std::set<String> knownSerials; // Correctly declare knownSerials
+    std::set<String> knownSerials;
     SerialManager &serialManager = SerialManager::getInstance();
 
     for (int i = 0; i < NUM_MUX_CHANNELS; i++)
@@ -34,17 +36,27 @@ void ModuleUtil::readModules()
         if (serialNumber != "" && isValidSerialNumber(serialNumber))
         {
 
-            knownSerials.insert(serialNumber); // Keep track of read serials
+            knownSerials.insert(serialNumber);
 
             if (!serialManager.isSerialKnown(serialNumber))
             {
                 Serial.print("Adding serial: " + serialNumber);
                 serialManager.updateSerialNumber(serialNumber, i);
-                sendSensorAttachEvent(serialNumber);
+                if (isWebSocketConnected)
+                {
+                    sendSensorAttachEvent(serialNumber);
+                }
+                else
+                {
+                    addPendingSerial(serialNumber);
+                }
             }
-        } else {
-            if(serialNumber != "") {
-            Serial.print("Invalid serial number: " + serialNumber);
+        }
+        else
+        {
+            if (serialNumber != "")
+            {
+                Serial.print("Invalid serial number: " + serialNumber);
             }
         }
     }

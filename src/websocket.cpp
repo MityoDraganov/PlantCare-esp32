@@ -2,63 +2,19 @@
 #include <ArduinoWebsockets.h>
 #include "websocket.h"
 #include "drivers/SensorManager/SensorManager.h"
+#include <queue>
+#include "utils/Json/Json.util.h"
 
 using namespace websockets;
 
 extern WebsocketsClient client;
-
 extern bool isWebSocketConnected;
 
 const unsigned long wsReconnectInterval = 2000;
 
-extern SensorManager sensorManager;
-void printJson(const JsonVariant &json, int indent = 0)
-{
-    // Create the indentation string manually
-    String indentStr;
-    for (int i = 0; i < indent; i++)
-    {
-        indentStr += "  "; // Adds two spaces per level
-    }
+std::queue<String> pendingSerials;
 
-    if (json.is<JsonObject>())
-    {
-        for (JsonPair kv : json.as<JsonObject>())
-        {
-            Serial.print(indentStr);
-            Serial.print(kv.key().c_str());
-            Serial.print(": ");
-            printJson(kv.value(), indent + 1); // Recursively print nested objects
-        }
-    }
-    else if (json.is<JsonArray>())
-    {
-        for (JsonVariant v : json.as<JsonArray>())
-        {
-            printJson(v, indent + 1);
-        }
-    }
-    else if (json.is<const char *>())
-    {
-        Serial.println(json.as<const char *>());
-    }
-    else if (json.is<int>())
-    {
-        Serial.println(json.as<int>());
-    }
-    else if (json.is<float>())
-    {
-        Serial.println(json.as<float>());
-    }
-    else if (json.is<bool>())
-    {
-        Serial.println(json.as<bool>() ? "true" : "false");
-    }
-    else
-    {
-        Serial.println("null");
-    }
-}
+extern SensorManager sensorManager;
 
 void onEventsCallback(WebsocketsEvent event, String data)
 {
@@ -152,43 +108,22 @@ void connectToWebSocket(const char *ws_server_address)
     }
 }
 
-void sendWebSocketMessage(const char *event, const JsonObject &data)
-{
-    if (isWebSocketConnected) // Check if the WebSocket is connected before sending
-    {
-        StaticJsonDocument<512> doc;
-        doc["Event"] = event;
-        doc["Data"] = data;
-
-        String message;
-        serializeJson(doc, message);
-        client.send(message);
-        Serial.println("Sent: " + message);
-    }
-    else
-    {
-        Serial.println("WebSocket is not connected.");
-    }
-}
 
 void sendSensorData()
 {
     if (isWebSocketConnected)
     {
-        // Retrieve sensor data as JSON
         DynamicJsonDocument sensorData = sensorManager.readAllSensors();
         Serial.println("sensorData");
-        printJson(sensorData);
-        // Prepare the WebSocket message with the sensor data
+        JsonUtil jsonUtil;
+        jsonUtil.printJson(sensorData, 2);
         StaticJsonDocument<512> doc;
         doc["Event"] = "HandleMeasurements";
         doc["Data"] = sensorData;
 
-        // Serialize the JSON document to a string
         String jsonData;
         serializeJson(doc, jsonData);
 
-        // Send the JSON string over WebSocket
         client.send(jsonData);
         Serial.println("Sent sensor data: " + jsonData);
     }
@@ -242,6 +177,20 @@ void sendKeepAlive()
     if (isWebSocketConnected)
     {
         client.ping();
-        //Serial.println("Sent keep-alive ping");
+        // Serial.println("Sent keep-alive ping");
+    }
+}
+
+void addPendingSerial(const String &serialNumber)
+{
+    pendingSerials.push(serialNumber);
+}
+
+void sendPendingSerials()
+{
+    while (!pendingSerials.empty())
+    {
+        sendSensorAttachEvent(pendingSerials.front());
+        pendingSerials.pop();
     }
 }

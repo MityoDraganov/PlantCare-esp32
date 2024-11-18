@@ -1,0 +1,108 @@
+<html>
+    <head>
+        <title>ESP32 Wi-Fi Config</title>
+        <style>
+            body {
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+			.container {
+            margin: auto;
+            width: 90%;
+            height: 100%;
+            text-align: center;
+            padding: 5%;
+        }
+
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1 >PlantsCare Wi-Fi Configuration</h1>
+            <form
+                action="/save"
+                method="POST"
+                style="display: flex; flex-direction: column; text-align: left; gap: 2%; height: 90%;"
+            >
+                <div style="display: flex; flex-direction: column;">
+                    <label for="ssid" style="font-size: 1.5rem;">Wi-Fi SSID:</label>
+                    <select
+                        id="ssid"
+                        name="ssid"
+                        style="
+                            display: flex;
+                            height: 3rem;
+                            width: 100%;
+                            align-items: center;
+                            justify-content: space-between;
+                            border-radius: 0.375rem;
+                            border: 1px solid #d1d5db; /* border-input */
+                            background-color: #ffffff; /* bg-background */
+                            padding: 0.5rem 0.75rem;
+                            font-size: 0.875rem;
+                            outline: none;
+                            transition: border-color 0.2s, box-shadow 0.2s;
+                        "
+                        onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 2px rgba(59, 130, 246, 0.5)';"
+                        onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+                    >
+                        <!--SSIDS_PLACEHOLDER-->
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column;">
+                    <label for="password" style="font-size: 1.5rem;">Wi-Fi Password:</label>
+                    <input
+                        style="
+                            display: flex;
+                            height: 3rem;
+                            width: 100%;
+                            border-radius: 0.375rem;
+                            border: 1px solid #d1d5db; /* border-input */
+                            background-color: #ffffff; /* bg-background */
+                            padding: 0.5rem 0.75rem;
+                            font-size: 0.875rem;
+                            outline: none;
+                            transition: border-color 0.2s, box-shadow 0.2s;
+                        "
+                        onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 2px rgba(59, 130, 246, 0.5)';"
+                        onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                    />
+                </div>
+                <button
+                    type="submit"
+                    style="
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        white-space: nowrap;
+                        border-radius: 0.375rem;
+                        font-size: 2rem;
+                        font-weight: 500;
+                        transition: background-color 0.2s, color 0.2s;
+                        padding: 0.5rem 1rem;
+                        background-color: #3b82f6;
+                        color: #ffffff;
+                        border: none;
+                        cursor: pointer;
+                        outline: none;
+						height: 4rem;
+                    "
+                    onmouseover="this.style.backgroundColor='#2563eb'" 
+                    onmouseout="this.style.backgroundColor='#3b82f6'"
+                >
+                    Save
+                </button>
+            </form>
+        </div>
+    </body>
+</html>

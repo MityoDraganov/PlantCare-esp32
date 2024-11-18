@@ -14,6 +14,9 @@
 #include <ArduinoWebsockets.h>
 #include <Ticker.h>
 
+#include <Preferences.h>
+Preferences preferences;
+
 EEPROMUtil eepromUtil(0x50);
 bool isWebSocketConnected = false;
 
@@ -57,31 +60,20 @@ String getSSIDs()
 
 DynamicJsonDocument jsonDoc(1024);
 
-// HTML content to be served
-const char *index_html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head><title>ESP32 Wi-Fi Config</title></head>
-<body>
-<h1>ESP32 Wi-Fi Configuration</h1>
-<form action="/save" method="POST">
-    <label for="ssid">Wi-Fi SSID:</label>
-    <select id="ssid" name="ssid">
-        <!--SSIDS_PLACEHOLDER-->
-    </select><br><br>
-    <label for="password">Wi-Fi Password:</label>
-    <input type="password" id="password" name="password" required><br><br>
-    <input type="submit" value="Save">
-</form>
-</body>
-</html>
-)rawliteral";
+const char *html_path = "/index.html";
 
 void handleRoot()
 {
-    String html = index_html;
-    html.replace("<!--SSIDS_PLACEHOLDER-->", getSSIDs());
-    server.send(200, "text/html", html);
+    if (SPIFFS.exists(html_path))
+    {
+        String html = SPIFFS.open("/index.html", "r").readString();
+        html.replace("<!--SSIDS_PLACEHOLDER-->", getSSIDs());
+        server.send(200, "text/html", html);
+    }
+    else
+    {
+        server.send(500, "text/plain", "Internal Server Error");
+    }
 }
 
 void connectToWiFi(const String &ssid, const String &password)
@@ -94,6 +86,12 @@ void connectToWiFi(const String &ssid, const String &password)
         delay(500);
         Serial.print(".");
     }
+
+    // Save SSID and password
+   preferences.begin("wifi", false);
+    preferences.putString("ssid", ssid);
+    preferences.putString("password", password);
+    preferences.end();
 
     Serial.println("Connected to Wi-Fi!");
     Serial.print("IP Address: ");
@@ -140,6 +138,7 @@ void setupOTA()
 
 void setup()
 {
+    Wire.begin(25,26);
     if (!SPIFFS.begin(true))
     { // Pass true to format if failed to mount
         Serial.println("SPIFFS Mount Failed");
@@ -157,15 +156,25 @@ void setup()
         Serial.println("Failed to parse JSON");
         return;
     }
+     
 
     eepromUtil.begin();
-    Wire.begin();
     WiFi.mode(WIFI_STA);
 
     Serial.println("Starting AP mode...");
     WiFi.softAP("ESP32_Config_AP");
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
+
+    preferences.begin("wifi", true);
+    String ssid = preferences.getString("ssid", "");
+    String password = preferences.getString("password", "");
+    preferences.end();
+
+    if (ssid != "" && password != "")
+    {
+        connectToWiFi(ssid, password);
+    }
 
     moduleUtil.readModules();
     SensorManager::initializeSensors();
