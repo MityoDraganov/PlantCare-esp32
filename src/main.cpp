@@ -217,10 +217,11 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-    }
+        connectToWebSocket("ws://188.34.162.248:8000/v1/pots/?token=pot1");
+    } 
     else if (WiFi.isConnected())
     {
+        sendPendingSerials();
         client.ping();
         delay(1000);
         client.poll();
