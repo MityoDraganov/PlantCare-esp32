@@ -15,29 +15,24 @@
 #include <Ticker.h>
 
 #include <Preferences.h>
-Preferences preferences;
-
-EEPROMUtil eepromUtil(0x50);
-bool isWebSocketConnected = false;
-
 using namespace websockets;
 
-WebServer server(80);
-ModuleUtil moduleUtil(32);
-String generateSerialNumber(int length);
-bool webSocketConnected = false;
-unsigned long lastReconnectAttempt = 0;
-const unsigned long reconnectInterval = 5000;
-
-const int EEPROM_SSID_ADDR = 0;
-const int EEPROM_PASS_ADDR = 64;
-const int EEPROM_MAX_LEN = 32;
-
-const int channelToGPIO[] = {32, 33, 34, 35};
-
-WebsocketsClient client;
-
+Preferences preferences;
 Ticker keepAliveTicker;
+DynamicJsonDocument jsonDoc(1024);
+String generateSerialNumber(int length);
+
+DNSServer dnsServer;
+WebServer server(80);
+WebsocketsClient client;
+bool isWebSocketConnected = false;
+
+EEPROMUtil eepromUtil(0x50);
+ModuleUtil moduleUtil(32);
+
+const unsigned long reconnectInterval = 5000;
+const int channelToGPIO[] = {32, 33, 34, 35};
+const char *html_path = "/index.html";
 
 String getSSIDs()
 {
@@ -50,6 +45,7 @@ String getSSIDs()
     }
     else
     {
+
         for (int i = 0; i < n; ++i)
         {
             ssids += "<option value=\"" + WiFi.SSID(i) + "\">" + WiFi.SSID(i) + "</option>";
@@ -58,9 +54,41 @@ String getSSIDs()
     return ssids;
 }
 
-DynamicJsonDocument jsonDoc(1024);
+void connectToWiFi(const String &ssid, const String &password)
+{
+    WiFi.begin(ssid.c_str(), password.c_str());
 
-const char *html_path = "/index.html";
+    Serial.print("Connecting to Wi-Fi");
+
+    unsigned long startAttemptTime = millis();
+    const unsigned long connectionTimeout = 15000; // Timeout in milliseconds (15 seconds)
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < connectionTimeout)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        // Save SSID and password only if connected
+        preferences.begin("wifi", false);
+        preferences.putString("ssid", ssid);
+        preferences.putString("password", password);
+        preferences.end();
+
+        Serial.println("\nConnected to Wi-Fi!");
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+    }
+    else
+    {
+        // Connection attempt timed out
+        Serial.println("\nFailed to connect to Wi-Fi. Please check SSID and password.");
+        WiFi.disconnect();
+    }
+}
+
 
 void handleRoot()
 {
@@ -76,28 +104,6 @@ void handleRoot()
     }
 }
 
-void connectToWiFi(const String &ssid, const String &password)
-{
-    WiFi.begin(ssid.c_str(), password.c_str());
-
-    Serial.print("Connecting to Wi-Fi");
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(".");
-    }
-
-    // Save SSID and password
-   preferences.begin("wifi", false);
-    preferences.putString("ssid", ssid);
-    preferences.putString("password", password);
-    preferences.end();
-
-    Serial.println("Connected to Wi-Fi!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-}
-
 void handleSave()
 {
     String ssid = server.arg("ssid");
@@ -108,6 +114,12 @@ void handleSave()
 
     String response = "Trying to connect to " + ssid + "...";
     server.send(200, "text/plain", response);
+}
+
+void handleNotFound()
+{
+    server.sendHeader("Location", "/portal");
+    server.send(302, "text/plain", "redirect to captive portal");
 }
 
 void setupOTA()
@@ -138,9 +150,9 @@ void setupOTA()
 
 void setup()
 {
-    Wire.begin(25,26);
+    Wire.begin(25, 26);
     if (!SPIFFS.begin(true))
-    { // Pass true to format if failed to mount
+    {
         Serial.println("SPIFFS Mount Failed");
         return;
     }
@@ -156,21 +168,26 @@ void setup()
         Serial.println("Failed to parse JSON");
         return;
     }
-     
 
     eepromUtil.begin();
-    WiFi.mode(WIFI_STA);
-
-    Serial.println("Starting AP mode...");
+    WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config_AP");
-    Serial.print("AP IP Address: ");
-    Serial.println(WiFi.softAPIP());
+
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.setTTL(300);
+    if ( dnsServer.start(53, "*", WiFi.softAPIP()))
+    {
+        Serial.println("Started DNS server in captive portal-mode");
+    }
+    else
+    {
+        Serial.println("Err: Can't start DNS server!");
+    }
 
     preferences.begin("wifi", true);
     String ssid = preferences.getString("ssid", "");
     String password = preferences.getString("password", "");
     preferences.end();
-
     if (ssid != "" && password != "")
     {
         connectToWiFi(ssid, password);
@@ -181,17 +198,10 @@ void setup()
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/favicon.ico", HTTP_GET, []()
-              {
-                  server.send(200, "image/x-icon", ""); // Sends an empty favicon
-              });
+              { server.send(200, "image/x-icon", ""); }); // Sends an empty favicon
     server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound([]()
-                      {
-                          Serial.print("Unhandled request for path: ");
-                          Serial.println(server.uri());
-                          handleRoot(); // Redirect to root or handle appropriately
-                      });
-
+    server.on("/portal", handleRoot);
+    server.onNotFound(handleNotFound);
     server.begin();
 
     setupOTA();
@@ -201,7 +211,9 @@ void loop()
 {
     ArduinoOTA.handle();
     server.handleClient();
+    ;
     moduleUtil.readModules();
+    dnsServer.processNextRequest();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
@@ -212,6 +224,10 @@ void loop()
         client.ping();
         delay(1000);
         client.poll();
+    }
+    else
+    {
+        delay(5); // give CPU some idle time
     }
 }
 

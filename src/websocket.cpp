@@ -25,6 +25,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
     else if (event == WebsocketsEvent::ConnectionClosed)
     {
         Serial.println("Connnection Closed");
+        isWebSocketConnected = false;
     }
     else if (event == WebsocketsEvent::GotPing)
     {
