@@ -4,7 +4,7 @@
 #include <functional>
 #include <map>
 #include <string>
-#include "Sensor.h"
+#include "drivers/Sensor/Sensor.h"
 
 class SensorFactory {
 public:
