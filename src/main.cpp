@@ -217,7 +217,7 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        connectToWebSocket("ws://188.34.162.248:8000/v1/pots/?token=pot1");
+        connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
     } 
     else if (WiFi.isConnected())
     {
