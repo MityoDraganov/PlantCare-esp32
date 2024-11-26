@@ -4,6 +4,8 @@
 #include "drivers/SensorManager/SensorManager.h"
 #include <queue>
 #include "utils/Json/Json.util.h"
+#include <HTTPClient.h>
+#include <Update.h>
 
 using namespace websockets;
 
@@ -15,6 +17,7 @@ const unsigned long wsReconnectInterval = 2000;
 std::queue<String> pendingSerials;
 
 extern SensorManager sensorManager;
+bool performFirmwareUpdate(const char *firmwareUrl);
 
 void onEventsCallback(WebsocketsEvent event, String data)
 {
@@ -79,6 +82,13 @@ void onMessageCallback(WebsocketsMessage message)
     {
         sendSensorData();
     }
+    else if (strcmp(event, "FirmwareUpdate") == 0)
+    {
+        const char *downloadUrl = doc["data"]["downloadUrl"];
+        Serial.println(downloadUrl);
+        Serial.println("Firmware update request received.");
+        performFirmwareUpdate(downloadUrl);
+    }
     else
     {
         Serial.print("Unknown event type: ");
@@ -108,7 +118,6 @@ void connectToWebSocket(const char *ws_server_address)
         client.close();
     }
 }
-
 
 void sendSensorData()
 {
@@ -194,4 +203,59 @@ void sendPendingSerials()
         sendSensorAttachEvent(pendingSerials.front());
         pendingSerials.pop();
     }
+}
+
+bool performFirmwareUpdate(const char *firmwareUrl)
+{
+    HTTPClient http;
+    http.begin(firmwareUrl); // Initialize connection to firmware URL
+
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK)
+    {
+        int contentLength = http.getSize();
+
+        if (contentLength > 0)
+        {
+            // Start OTA update
+            bool canBegin = Update.begin(contentLength);
+            if (canBegin)
+            {
+                WiFiClient *stream = http.getStreamPtr();
+                size_t written = Update.writeStream(*stream);
+
+                if (written == contentLength)
+                {
+                    if (Update.end())
+                    {
+                        Serial.println("Firmware updated successfully!");
+                        ESP.deepSleep(0)
+                    }
+                    else
+                    {
+                        Serial.println("Firmware update failed!");
+                        return false;
+                    }
+                }
+                else
+                {
+                    Serial.println("Firmware update error: Incorrect content length");
+                    return false;
+                }
+            }
+            else
+            {
+                Serial.println("Not enough space for OTA update");
+                return false;
+            }
+        }
+    }
+    else
+    {
+        Serial.printf("HTTP GET failed, error: %d\n", httpCode);
+        return false;
+    }
+
+    http.end();
+    return false;
 }

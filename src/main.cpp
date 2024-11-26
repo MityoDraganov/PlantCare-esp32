@@ -211,13 +211,13 @@ void loop()
 {
     ArduinoOTA.handle();
     server.handleClient();
-    ;
     moduleUtil.readModules();
     dnsServer.processNextRequest();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
+        //connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
+        connectToWebSocket("ws://192.168.0.172:8000/api/v1/pots/?token=pot_1");
     } 
     else if (WiFi.isConnected())
     {
