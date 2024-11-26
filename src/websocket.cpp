@@ -229,7 +229,9 @@ bool performFirmwareUpdate(const char *firmwareUrl)
                     if (Update.end())
                     {
                         Serial.println("Firmware updated successfully!");
-                        ESP.deepSleep(0);
+                        isWebSocketConnected = false;
+                        client.close();
+                        ESP.restart();
                     }
                     else
                     {
