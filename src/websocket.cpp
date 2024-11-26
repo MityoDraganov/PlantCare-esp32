@@ -229,7 +229,7 @@ bool performFirmwareUpdate(const char *firmwareUrl)
                     if (Update.end())
                     {
                         Serial.println("Firmware updated successfully!");
-                        ESP.deepSleep(0)
+                        ESP.deepSleep(0);
                     }
                     else
                     {
