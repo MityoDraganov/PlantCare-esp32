@@ -57,7 +57,7 @@ String getSSIDs()
 
 DynamicJsonDocument jsonDoc(1024);
 
-const char* html_path = "/index.html";
+const char *html_path = "/index.html";
 
 void handleRoot()
 {
@@ -132,11 +132,11 @@ void setup()
     isWebSocketConnected = false;
     client.close();
     if (!SPIFFS.begin(true))
-    { 
+    {
         Serial.println("SPIFFS Mount Failed");
         return;
     }
-    
+
     Serial.begin(115200);
     // connectToWiFi("Welikowi", "password here");
     // connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
@@ -154,6 +154,17 @@ void setup()
     eepromUtil.begin();
     Wire.begin();
     WiFi.mode(WIFI_STA);
+
+    for (int channel = 0; channel < 4; ++channel)
+    {
+        String serialNumber = generateSerialNumber(16);
+        eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
+
+        Serial.print("Written serial number for channel ");
+        Serial.print(channel);
+        Serial.print(": ");
+        Serial.println(serialNumber);
+    }
 
     Serial.println("Starting AP mode...");
     WiFi.softAP("ESP32_Config_AP");
@@ -181,8 +192,15 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-    Serial.println("Waiting for ws connection");
+        // connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
         connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
+    }
+    else if (WiFi.isConnected())
+    {
+        sendPendingSerials();
+        client.ping();
+        delay(1000);
+        client.poll();
     }
     if (!isWebSocketConnected)
     {
@@ -206,6 +224,12 @@ String generateSerialNumber(int length)
     for (int i = 0; i < length; ++i)
     {
         serialNumber += characters[distribution(generator)];
+    }
+
+    String control = "type=control";
+    for (int i = 0; i < control.length(); ++i)
+    {
+        serialNumber += control[i];
     }
 
     return serialNumber;
