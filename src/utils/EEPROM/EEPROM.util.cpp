@@ -76,7 +76,7 @@ String EEPROMUtil::readStringExternal(int address, int maxLength, uint8_t muxCha
 {
     // Check if the device is present once at the start
     if (!isDevicePresent(muxChannel, 0x50)) {
-        return ""; // Return an empty string if the device is not present
+        return "no device present on 0x50"; // Return an empty string if the device is not present
     }
 
     char data[maxLength + 1];

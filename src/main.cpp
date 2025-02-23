@@ -144,16 +144,11 @@ void setup()
     {
         ; // Wait for serial port to connect. Needed for native USB
     }
-    DeserializationError error = deserializeJson(jsonDoc, configJson);
-    if (error)
-    {
-        Serial.println("Failed to parse JSON");
-        return;
-    }
+
 
     eepromUtil.begin();
     Wire.begin();
-    WiFi.mode(WIFI_STA);
+
 
     for (int channel = 0; channel < 4; ++channel)
     {
@@ -166,50 +161,21 @@ void setup()
         Serial.println(serialNumber);
     }
 
-    Serial.println("Starting AP mode...");
-    WiFi.softAP("ESP32_Config_AP");
-    Serial.print("AP IP Address: ");
-    Serial.println(WiFi.softAPIP());
+
+
+
 
     moduleUtil.readModules();
     SensorManager::initializeSensors();
 
-    server.on("/", HTTP_GET, handleRoot);
-    server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound(handleRoot);
-
-    server.begin();
-
-    setupOTA();
-    keepAliveTicker.attach(5, sendKeepAlive);
 }
 
 void loop()
 {
-    ArduinoOTA.handle();
-    server.handleClient();
-    client.ping();
 
-    if (WiFi.isConnected() && !isWebSocketConnected)
-    {
-        // connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
-        connectToWebSocket("ws://192.168.0.171:8080/v1/pots/?token=pot_1");
-    }
-    else if (WiFi.isConnected())
-    {
-        sendPendingSerials();
-        client.ping();
-        delay(1000);
-        client.poll();
-    }
-    if (!isWebSocketConnected)
-    {
-        return;
-    }
+    delay(1000);
+
     moduleUtil.readModules();
-    sendPendingSerials();
-
-    client.poll();
 }
 
 std::mt19937 generator;
