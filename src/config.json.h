@@ -6,16 +6,12 @@ const char* configJson = R"rawliteral(
         {
             "serialNumber": "YKTMgxAKCwE5jNXo",
             "type": "MoistureSensor"
-        },
-        {
-            "serialNumber": "oMaRjWZ554jdMf2Y",
-            "name": "TemperatureSensor"
         }
     ],
     "controls": [
         {
-            "serialNumber": "",
-            "type": "WaterPump",
+            "serialNumber": "aG4nx27foxCW0N5q",
+            "type": "ValveControl",
             "dependantSensor": {
                 "serialNumber": "YKTMgxAKCwE5jNXo",
                 "minValue": 0,

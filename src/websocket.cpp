@@ -123,7 +123,7 @@ void sendSensorData()
 {
     if (isWebSocketConnected)
     {
-        DynamicJsonDocument sensorData = sensorManager.readAllSensors();
+        DynamicJsonDocument sensorData = sensorManager.readAllSensorsAndControls();
         Serial.println("sensorData");
         JsonUtil jsonUtil;
         jsonUtil.printJson(sensorData, 2);

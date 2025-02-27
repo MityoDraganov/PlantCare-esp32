@@ -13,7 +13,8 @@ public:
     static Sensor* getSensorByType(const char *type);
     static std::vector<Sensor *> &getAllSensors();
     static void initializeSensors();
-    static DynamicJsonDocument readAllSensors();
+    static DynamicJsonDocument readAllSensorsAndControls();
+    Sensor* getSensorBySerialNumber(const String &serialNumber);
 
 private:
     std::vector<Sensor *> sensors;

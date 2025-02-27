@@ -90,7 +90,6 @@ void connectToWiFi(const String &ssid, const String &password)
     }
 }
 
-
 void handleRoot()
 {
     if (SPIFFS.exists(html_path))
@@ -174,31 +173,30 @@ void setup()
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config_AP");
 
+    // for (int channel = 0; channel < 4; ++channel)
+    // {
+    //     String serialNumber = generateSerialNumber(16);
+    //     eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
 
-    for (int channel = 0; channel < 4; ++channel)
-    {
-        String serialNumber = generateSerialNumber(16);
-        eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
+    //     Serial.print("Written serial number for channel ");
+    //     Serial.print(channel);
+    //     Serial.print(": ");
+    //     Serial.println(serialNumber);
+    // }
 
-        Serial.print("Written serial number for channel ");
-        Serial.print(channel);
-        Serial.print(": ");
-        Serial.println(serialNumber);
-    }
-
-    //read serials from eeprom
-    for(int i = 0; i < 4; i++)
-    {
-        String serial = eepromUtil.readStringExternal(0, 32, i);
-        Serial.print("Read serial number for channel ");
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.println(serial);
-    }
+    // //read serials from eeprom
+    // for(int i = 0; i < 4; i++)
+    // {
+    //     String serial = eepromUtil.readStringExternal(0, 32, i);
+    //     Serial.print("Read serial number for channel ");
+    //     Serial.print(i);
+    //     Serial.print(": ");
+    //     Serial.println(serial);
+    // }
 
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.setTTL(300);
-    if ( dnsServer.start(53, "*", WiFi.softAPIP()))
+    if (dnsServer.start(53, "*", WiFi.softAPIP()))
     {
         Serial.println("Started DNS server in captive portal-mode");
     }
@@ -240,9 +238,9 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        //connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
+        // connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
         connectToWebSocket("ws://192.168.0.171:8000/api/v1/pots/?token=pot_1");
-    } 
+    }
     else if (WiFi.isConnected())
     {
         sendPendingSerials();
@@ -250,10 +248,8 @@ void loop()
         delay(1000);
         client.poll();
     }
-    else
-    {
-        delay(5); // give CPU some idle time
-    }
+
+    delay(5);
 }
 
 std::mt19937 generator;
