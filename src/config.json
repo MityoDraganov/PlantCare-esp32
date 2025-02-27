@@ -1,4 +1,23 @@
 {
-  "YKTMgxAKCwE5jNXo": "MoistureSensor",
-  "oMaRjWZ554jdMf2Y": "TemperatureSensor"
+	"sensors": [
+		{
+			"serialNumber": "YKTMgxAKCwE5jNXo",
+			"type": "MoistureSensor"
+		},
+		{
+			"serialNumber": "oMaRjWZ554jdMf2Y",
+			"name": "TemperatureSensor"
+		}
+	],
+  "controls": [
+    {
+      "serialNumber": "",
+      "type": "WaterPump",
+      "dependantSensor": {
+        "serialNumber": "YKTMgxAKCwE5jNXo",
+        "minValue": 0,
+        "maxValue": 50
+      }
+    }
+  ]
 }

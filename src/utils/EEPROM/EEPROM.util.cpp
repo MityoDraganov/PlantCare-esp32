@@ -79,14 +79,26 @@ String EEPROMUtil::readStringExternal(int address, int maxLength, uint8_t muxCha
         return ""; // Return an empty string if the device is not present
     }
 
-    char data[maxLength + 1];
-    for (int i = 0; i < maxLength; i++)
+    char data[maxLength + 1]; // Buffer to hold the string
+    int i;
+
+    for (i = 0; i < maxLength; i++)
     {
-        data[i] = readByteExternal(address + i, muxChannel);
+        char byteRead = readByteExternal(address + i, muxChannel);
+
+        // Stop reading if we encounter an empty or invalid character
+        if (byteRead == '\0' || byteRead == 0xFF) {
+            break;
+        }
+
+        data[i] = byteRead;
     }
-    data[maxLength] = '\0'; // Null-terminate the string
+
+    data[i] = '\0'; // Null-terminate the string properly
+
     return String(data);
 }
+
 
 
 //--------------- Internal //EEPROM Functions (for WiFi Credentials) --------------- //

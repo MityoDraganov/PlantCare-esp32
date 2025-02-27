@@ -14,7 +14,7 @@ extern bool isWebSocketConnected;
 
 const unsigned long wsReconnectInterval = 2000;
 
-std::queue<String> pendingSerials;
+std::queue<std::pair<String, String>> pendingSerials;
 
 extern SensorManager sensorManager;
 bool performFirmwareUpdate(const char *firmwareUrl);
@@ -182,6 +182,45 @@ void sendSensorDetachEvent(String serialNumber)
     Serial.println("Sent: " + jsonData);
 }
 
+void sendControlAttachEvent(String serialNumber)
+{
+    if (isWebSocketConnected) // Check if WebSocket is connected before sending
+    {
+        StaticJsonDocument<512> doc;
+        doc["Event"] = "HandleAttachControl";  // Correct event for control devices
+
+        // Create a nested "Data" object inside the main JSON document
+        JsonObject data = doc.createNestedObject("Data");
+        data["SerialNumber"] = serialNumber;
+
+        // Serialize the JSON document to a string
+        String jsonData;
+        serializeJson(doc, jsonData);
+
+        // Send the JSON string over WebSocket
+        client.send(jsonData);
+        Serial.println("Sent sendControlAttachEvent: " + jsonData);
+    }
+}
+
+void sendControlDetachEvent(String serialNumber)
+{
+    StaticJsonDocument<512> doc;
+    doc["Event"] = "HandleDetachControl";
+
+    // Create a nested "Data" object inside the main JSON document
+    JsonObject data = doc.createNestedObject("Data");
+    data["SerialNumber"] = serialNumber;
+
+    // Serialize the JSON document to a string
+    String jsonData;
+    serializeJson(doc, jsonData);
+
+    // Send the JSON string over WebSocket
+    client.send(jsonData);
+    Serial.println("Sent: " + jsonData);
+}
+
 void sendKeepAlive()
 {
     if (isWebSocketConnected)
@@ -191,16 +230,27 @@ void sendKeepAlive()
     }
 }
 
-void addPendingSerial(const String &serialNumber)
+void addPendingSerial(const String &serialNumber, const String &type)
 {
-    pendingSerials.push(serialNumber);
+    pendingSerials.push(std::make_pair(serialNumber, type));
 }
 
 void sendPendingSerials()
 {
     while (!pendingSerials.empty())
     {
-        sendSensorAttachEvent(pendingSerials.front());
+        String serialNumber = pendingSerials.front().first;
+        String type = pendingSerials.front().second;
+
+        if (type == "control")
+        {
+            sendControlAttachEvent(serialNumber);
+        }
+        else if (type == "sensor")
+        {
+            sendSensorAttachEvent(serialNumber);
+        }
+
         pendingSerials.pop();
     }
 }

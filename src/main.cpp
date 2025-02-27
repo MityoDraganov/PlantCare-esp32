@@ -10,6 +10,7 @@
 #include "utils/Module/Module.util.h"
 #include <Wire.h>
 #include "drivers/SensorManager/SensorManager.h"
+#include "drivers/ControlManager/ControlManager.h"
 #include "config.json.h"
 #include <ArduinoWebsockets.h>
 #include <Ticker.h>
@@ -173,6 +174,28 @@ void setup()
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config_AP");
 
+
+    for (int channel = 0; channel < 4; ++channel)
+    {
+        String serialNumber = generateSerialNumber(16);
+        eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
+
+        Serial.print("Written serial number for channel ");
+        Serial.print(channel);
+        Serial.print(": ");
+        Serial.println(serialNumber);
+    }
+
+    //read serials from eeprom
+    for(int i = 0; i < 4; i++)
+    {
+        String serial = eepromUtil.readStringExternal(0, 32, i);
+        Serial.print("Read serial number for channel ");
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(serial);
+    }
+
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.setTTL(300);
     if ( dnsServer.start(53, "*", WiFi.softAPIP()))
@@ -195,6 +218,7 @@ void setup()
 
     moduleUtil.readModules();
     SensorManager::initializeSensors();
+    ControlManager::initializeControls();
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/favicon.ico", HTTP_GET, []()
@@ -217,7 +241,7 @@ void loop()
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
         //connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
-        connectToWebSocket("ws://192.168.0.172:8000/api/v1/pots/?token=pot_1");
+        connectToWebSocket("ws://192.168.0.171:8000/api/v1/pots/?token=pot_1");
     } 
     else if (WiFi.isConnected())
     {
@@ -244,6 +268,12 @@ String generateSerialNumber(int length)
     for (int i = 0; i < length; ++i)
     {
         serialNumber += characters[distribution(generator)];
+    }
+
+    String control = "type=control";
+    for (int i = 0; i < control.length(); ++i)
+    {
+        serialNumber += control[i];
     }
 
     return serialNumber;

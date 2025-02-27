@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <map>
+#include <set>
+
 
 class SerialManager
 {
@@ -18,20 +20,25 @@ public:
         return instance;
     }
 
-    void updateSerialNumber(const String &serialNumber, uint8_t channel);
+    void updateSensorSerialNumber(const String &serialNumber, uint8_t channel);
+    void updateControlSerialNumber(const String &serialNumber, uint8_t channel);
+    
+    bool isSensorSerial(const String &serialNumber) const;
+    bool isControlSerial(const String &serialNumber) const;
     bool isSerialKnown(const String &serialNumber) const;
+
+
     void printAllSerials() const;
     std::map<String, SerialInfo> getAllSerials() const;
     void removeSerialNumber(const String &serialNumber);
     int getGPIOPinForSerial(const String &serialNumber) const;
 
-private:
-    SerialManager() {}
-    ~SerialManager() {}
-    SerialManager(const SerialManager &) = delete;
-    SerialManager &operator=(const SerialManager &) = delete;
-
+    private:
+    SerialManager() = default;
+    
     std::map<String, SerialInfo> _serialMap;
+    std::set<String> knownSensorSerials;
+    std::set<String> knownControlSerials;
 };
 
 #endif
