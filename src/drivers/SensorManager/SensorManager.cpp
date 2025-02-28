@@ -8,18 +8,21 @@ const int channelToGPIO[] = {32, 33, 34, 35};
 extern std::map<String, String> sensorConfig;
 extern DynamicJsonDocument jsonDoc;
 
-const char *findKeyByValue(const String &searchValue)
+const char *findKeyBySensorType(const String &searchType)
 {
-    for (JsonPair kv : jsonDoc.as<JsonObject>())
+    JsonArray sensors = jsonDoc["sensors"].as<JsonArray>();
+    for (JsonObject sensor : sensors)
     {
-        // If the value matches the search value
-        if (kv.value().as<String>() == searchValue)
+        String type = sensor["type"].as<String>();
+        if (type == searchType)
         {
-            return kv.key().c_str(); // Return the key as a C-string
+            return sensor["serialNumber"].as<const char *>(); // Return the matching serial number
         }
     }
     return nullptr; // Return null if no match is found
 }
+
+
 
 void SensorManager::registerSensor(Sensor *sensor)
 {
@@ -55,7 +58,7 @@ void SensorManager::initializeSensors()
         Serial.println("Found sensor: " + String(sensor->getType()));
         String sensorType = sensor->getType();
 
-        String serialNumber = findKeyByValue(sensorType);
+        String serialNumber = findKeyBySensorType(sensorType);
         Serial.println("serialNumber");
         Serial.println(serialNumber);
 
