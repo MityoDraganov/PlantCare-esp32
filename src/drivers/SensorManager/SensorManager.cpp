@@ -81,14 +81,14 @@ DynamicJsonDocument SensorManager::readAllSensorsAndControls()
     // Create a JSON document to store sensor and control data
     DynamicJsonDocument sensorData(512);
     JsonArray sensorArray = sensorData.createNestedArray("sensors");
-    JsonArray controlArray = sensorData.createNestedArray("controls");
+    //JsonArray controlArray = sensorData.createNestedArray("controls");
 
     for (Sensor *sensor : getInstance().sensors)
     {
         if (sensor->getGpio() != -1)
         {                                    // Check if the GPIO is initialized
             int value = sensor->readValue(); // Read the sensor value
-            String serialNumber = findKeyByValue(sensor->getType());
+            String serialNumber = findKeyBySensorType(sensor->getType());
 
             // Add sensor data to JSON array
             if (!serialNumber.isEmpty())
@@ -156,7 +156,7 @@ Sensor* SensorManager::getSensorBySerialNumber(const String &serialNumber)
 {
     for (Sensor *sensor : getInstance().sensors)
     {
-        String sensorSerial = findKeyByValue(sensor->getType());
+        String sensorSerial = findKeyBySensorType(sensor->getType());
         if (sensorSerial == serialNumber)
         {
             return sensor;

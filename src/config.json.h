@@ -12,10 +12,10 @@ const char* configJson = R"rawliteral(
         {
             "serialNumber": "aG4nx27foxCW0N5q",
             "type": "ValveControl",
+            "minValue": 0,
+            "maxValue": 20,
             "dependantSensor": {
-                "serialNumber": "YKTMgxAKCwE5jNXo",
-                "minValue": 0,
-                "maxValue": 50
+                "serialNumber": "aG4nx27foxCW0N5q"
             }
         }
     ]
