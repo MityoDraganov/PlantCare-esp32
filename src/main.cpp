@@ -173,26 +173,26 @@ void setup()
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config_AP");
 
-    // for (int channel = 0; channel < 4; ++channel)
-    // {
-    //     String serialNumber = generateSerialNumber(16);
-    //     eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
+    for (int channel = 0; channel < 4; ++channel)
+    {
+        String serialNumber =  "aG4nx27foxCW0N5q";
+        eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
 
-    //     Serial.print("Written serial number for channel ");
-    //     Serial.print(channel);
-    //     Serial.print(": ");
-    //     Serial.println(serialNumber);
-    // }
+        Serial.print("Written serial number for channel ");
+        Serial.print(channel);
+        Serial.print(": ");
+        Serial.println(serialNumber);
+    }
 
     // //read serials from eeprom
-    // for(int i = 0; i < 4; i++)
-    // {
-    //     String serial = eepromUtil.readStringExternal(0, 32, i);
-    //     Serial.print("Read serial number for channel ");
-    //     Serial.print(i);
-    //     Serial.print(": ");
-    //     Serial.println(serial);
-    // }
+    for(int i = 0; i < 4; i++)
+    {
+        String serial = eepromUtil.readStringExternal(0, 32, i);
+        Serial.print("Read serial number for channel ");
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(serial);
+    }
 
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.setTTL(300);
@@ -235,6 +235,8 @@ void loop()
     server.handleClient();
     moduleUtil.readModules();
     dnsServer.processNextRequest();
+
+    ControlManager::triggerControls();
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {

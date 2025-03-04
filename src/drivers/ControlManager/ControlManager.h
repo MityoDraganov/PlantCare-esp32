@@ -24,8 +24,15 @@ public:
     // Read all controls into a JSON document
     static DynamicJsonDocument readAllControls();
 
+    // Trigger all controls based on sensor readings
+    static void triggerControls();
+
+    int getMinValueForControl(const char* serialNumber);
+    int getMaxValueForControl(const char* serialNumber);
+
 private:
     std::vector<Control*> controls;
+    static const char *findDependentSensorSerialByControlType(const String &searchType);
 
     // Singleton instance getter
     static ControlManager& getInstance() {
