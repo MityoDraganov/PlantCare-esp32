@@ -173,16 +173,16 @@ void setup()
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config_AP");
 
-    for (int channel = 0; channel < 4; ++channel)
-    {
-        String serialNumber =  "aG4nx27foxCW0N5q";
-        eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
+    // for (int channel = 0; channel < 4; ++channel)
+    // {
+    //     String serialNumber =  "aG4nx27foxCW0N5qtype=control";
+    //     eepromUtil.writeStringExternal(0, serialNumber, serialNumber.length(), channel);
 
-        Serial.print("Written serial number for channel ");
-        Serial.print(channel);
-        Serial.print(": ");
-        Serial.println(serialNumber);
-    }
+    //     Serial.print("Written serial number for channel ");
+    //     Serial.print(channel);
+    //     Serial.print(": ");
+    //     Serial.println(serialNumber);
+    // }
 
     // //read serials from eeprom
     for(int i = 0; i < 4; i++)
@@ -231,6 +231,9 @@ void setup()
 
 void loop()
 {
+
+
+
     ArduinoOTA.handle();
     server.handleClient();
     moduleUtil.readModules();
@@ -240,8 +243,8 @@ void loop()
 
     if (WiFi.isConnected() && !isWebSocketConnected)
     {
-        // connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
-        connectToWebSocket("ws://192.168.0.171:8000/api/v1/pots/?token=pot_1");
+         connectToWebSocket("ws://188.34.162.248:8000/api/v1/pots/?token=pot1");
+        //connectToWebSocket("ws://192.168.0.171:8000/api/v1/pots/?token=pot_1");
     }
     else if (WiFi.isConnected())
     {
