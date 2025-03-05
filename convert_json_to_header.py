@@ -3,7 +3,7 @@ import os
 
 # Paths to the JSON file and output header file
 json_file_path = "src/config.json"
-header_file_path = "src/config.json.h"
+header_file_path = "src/config.json.cpp"
 
 # Check if JSON file exists
 if os.path.exists(json_file_path):

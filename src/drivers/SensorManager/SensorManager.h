@@ -13,15 +13,16 @@ public:
     static Sensor* getSensorByType(const char *type);
     static std::vector<Sensor *> &getAllSensors();
     static void initializeSensors();
-    static DynamicJsonDocument readAllSensors();
-
-private:
-    std::vector<Sensor *> sensors;
+    static DynamicJsonDocument readAllSensorsAndControls();
+    Sensor* getSensorBySerialNumber(const String &serialNumber);
 
     static SensorManager& getInstance() {
         static SensorManager instance;
         return instance;
     }
+private:
+    std::vector<Sensor *> sensors;
+
 };
 
 #endif // SENSORMANAGER_H
