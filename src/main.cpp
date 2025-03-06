@@ -32,7 +32,15 @@ EEPROMUtil eepromUtil(0x50);
 ModuleUtil moduleUtil(32);
 
 const unsigned long reconnectInterval = 5000;
-const int channelToGPIO[] = {32, 33, 34, 35};
+const int channelToGPIO[] = {32, 33, 14, 27};
+
+void resetGPIOPins() {
+    for (int i = 0; i < sizeof(channelToGPIO) / sizeof(channelToGPIO[0]); i++) {
+        int gpioPin = channelToGPIO[i];
+        pinMode(gpioPin, INPUT); // Set pin to input mode
+    }
+}
+
 const char *html_path = "/index.html";
 
 String getSSIDs()
@@ -232,6 +240,7 @@ void setup()
 void loop()
 {
 
+    resetGPIOPins();
 
 
     ArduinoOTA.handle();
