@@ -2,7 +2,7 @@
 #include <set>
 
 
-const int channelToGPIO[] = {32, 33, 4, 16};
+const int channelToGPIO[] = {32, 33, 16, 17};
 
 
 
