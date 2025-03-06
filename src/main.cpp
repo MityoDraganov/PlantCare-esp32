@@ -158,6 +158,7 @@ void setupOTA()
 
 void setup()
 {
+    resetGPIOPins();
     Wire.begin(25, 26);
     if (!SPIFFS.begin(true))
     {
@@ -240,7 +241,7 @@ void setup()
 void loop()
 {
 
-    resetGPIOPins();
+
 
 
     ArduinoOTA.handle();
