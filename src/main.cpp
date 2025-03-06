@@ -32,7 +32,9 @@ EEPROMUtil eepromUtil(0x50);
 ModuleUtil moduleUtil(32);
 
 const unsigned long reconnectInterval = 5000;
-const int channelToGPIO[] = {32, 33, 14, 27};
+const int channelToGPIO[] = {32, 33, 4, 16};
+
+
 
 void resetGPIOPins() {
     for (int i = 0; i < sizeof(channelToGPIO) / sizeof(channelToGPIO[0]); i++) {
