@@ -4,7 +4,8 @@
 #include "utils/SerialManager/SerialManager.h"
 #include <ArduinoJson.h>
 
-const int channelToGPIO[] = {32, 33, 14, 27};
+const int channelToGPIO[] = {32, 33, 4, 16};
+
 extern std::map<String, String> sensorConfig;
 extern DynamicJsonDocument jsonDoc;
 

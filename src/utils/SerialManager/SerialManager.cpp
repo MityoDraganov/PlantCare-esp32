@@ -2,7 +2,9 @@
 #include <set>
 
 
-const int channelToGPIO[] = {32, 33, 14, 27};
+const int channelToGPIO[] = {32, 33, 4, 16};
+
+
 
 // **Update Sensor Serial**
 void SerialManager::updateSensorSerialNumber(const String &serialNumber, uint8_t channel)
